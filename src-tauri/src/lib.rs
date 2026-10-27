@@ -95,6 +95,12 @@ pub fn run() {
             commands::lsp::lsp_complete,
             commands::lsp::lsp_sessions,
             commands::lsp::lsp_detect,
+            // checkpoints
+            commands::checkpoint::checkpoint_snapshot,
+            commands::checkpoint::checkpoint_get,
+            commands::checkpoint::checkpoint_list,
+            commands::checkpoint::checkpoint_restore,
+            commands::checkpoint::checkpoint_clear,
             // docker
             commands::docker::docker_info,
             commands::docker::docker_containers,

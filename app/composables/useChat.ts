@@ -101,6 +101,7 @@ const approvalResolvers = new Map<string, (ok: boolean) => void>()
 
 export function useChat() {
   const ide = useIde()
+  const checkpoints = useCheckpoints()
   const messages = useState<ChatMessage[]>('kudo:chat-messages', () => [])
   const busy = useState<boolean>('kudo:chat-busy', () => false)
   const requestId = useState<string | null>('kudo:chat-request', () => null)
@@ -195,6 +196,7 @@ export function useChat() {
           return summarise(file.text)
         }
         case 'write_file': {
+          await checkpoints.snapshot(String(args.path ?? ''))
           await call('write_file', { path: args.path, text: args.content ?? '' })
           const open = ide.tabs.value.find((t) => t.path === args.path)
           if (open) {
@@ -250,6 +252,7 @@ export function useChat() {
     }
     messages.value = [...messages.value, user]
     busy.value = true
+    checkpoints.beginTurn(content)
 
     let skillContext = ''
     if (ide.settings.value.ai.agentMode) {
@@ -349,6 +352,10 @@ export function useChat() {
           messages.value[toolIndex] = {
             ...messages.value[toolIndex],
             content: output
+          }
+          const reply = messages.value[idx]
+          if (reply && !reply.checkpointId && checkpoints.turnId.value) {
+            reply.checkpointId = checkpoints.turnId.value
           }
           persist()
         }

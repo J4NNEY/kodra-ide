@@ -2,9 +2,11 @@
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import {
   Bot,
+  Check,
   ChevronDown,
   ChevronRight,
   CornerDownLeft,
+  History,
   Loader2,
   Send,
   Settings2,
@@ -12,13 +14,16 @@ import {
   Square,
   Sparkles,
   Trash2,
+  Undo2,
   X
 } from 'lucide-vue-next'
 import { renderMarkdown } from '../lib/markdown'
 import type { ChatMessage } from '../lib/types'
+import type { CheckpointSummary } from '../composables/useCheckpoints'
 
 const ide = useIde()
 const chat = useChat()
+const checkpoints = useCheckpoints()
 const settingsTab = useState<string>('kudo:settings-tab', () => 'appearance')
 
 const input = ref('')
@@ -107,6 +112,59 @@ function openAiSettings() {
 function toggleTool(id: string) {
   expanded.value = { ...expanded.value, [id]: !expanded.value[id] }
 }
+
+const restoring = ref<string | null>(null)
+const missing = ref<Record<string, boolean>>({})
+
+function checkpointOf(message: ChatMessage): CheckpointSummary | undefined {
+  if (!message.checkpointId) return undefined
+  return checkpoints.summaries.value[message.checkpointId]
+}
+
+function checkpointFiles(message: ChatMessage) {
+  return checkpointOf(message)?.files ?? []
+}
+
+function filesLabel(message: ChatMessage) {
+  if (isExpired(message)) return 'expired'
+  const files = checkpointFiles(message)
+  if (!files.length) return checkpointOf(message) ? 'no file changes' : 'loading…'
+  return files.length === 1 ? '1 file' : `${files.length} files`
+}
+
+function isExpired(message: ChatMessage) {
+  return !!message.checkpointId && !!missing.value[message.checkpointId]
+}
+
+function fileState(file: { existed: boolean; changed: boolean }) {
+  if (!file.changed) return { tag: '=', label: 'unchanged' }
+  return file.existed ? { tag: 'M', label: 'modified' } : { tag: 'A', label: 'created' }
+}
+
+async function restoreCheckpoint(message: ChatMessage) {
+  const id = message.checkpointId
+  if (!id || restoring.value) return
+  restoring.value = id
+  const result = await checkpoints.restore(id)
+  if (result) {
+    message.restoredAt = Date.now()
+    chat.persist()
+  }
+  restoring.value = null
+}
+
+watch(
+  () => visible.value.map((m) => m.checkpointId ?? '').join(','),
+  async () => {
+    for (const message of visible.value) {
+      const id = message.checkpointId
+      if (!id || checkpoints.summaries.value[id] || missing.value[id]) continue
+      const summary = await checkpoints.get(id)
+      if (!summary) missing.value = { ...missing.value, [id]: true }
+    }
+  },
+  { immediate: true }
+)
 
 function focusComposer() {
   composerEl.value?.focus()
@@ -212,6 +270,48 @@ onBeforeUnmount(() => {
             <span v-for="call in message.toolCalls" :key="call.id" class="call-chip">
               {{ call.name }}
             </span>
+          </div>
+          <div v-if="message.checkpointId" class="checkpoint-card">
+            <div class="checkpoint-head">
+              <History :size="13" />
+              <span class="checkpoint-title">File checkpoint</span>
+              <span class="checkpoint-count">· {{ filesLabel(message) }}</span>
+              <div class="spacer" />
+              <span v-if="message.restoredAt" class="checkpoint-restored">
+                <Check :size="11" /> Restored
+              </span>
+              <button
+                v-else
+                class="btn ghost sm"
+                :disabled="!!restoring || !checkpointOf(message)"
+                title="Put these files back the way they were before this reply"
+                @click="restoreCheckpoint(message)"
+              >
+                <Loader2 v-if="restoring === message.checkpointId" :size="11" class="spin" />
+                <Undo2 v-else :size="11" />
+                Restore
+              </button>
+            </div>
+            <ul v-if="checkpointFiles(message).length" class="checkpoint-files">
+              <li v-for="file in checkpointFiles(message)" :key="file.path">
+                <span class="file-state" :class="fileState(file).tag === 'A' ? 'added' : ''">
+                  {{ fileState(file).tag }}
+                </span>
+                <span class="file-rel" :title="file.path">{{ file.rel }}</span>
+                <span class="file-tag">{{
+                  message.restoredAt ? 'reverted' : fileState(file).label
+                }}</span>
+              </li>
+            </ul>
+            <p class="checkpoint-note">
+              <template v-if="message.restoredAt">
+                These files were rolled back to their state before this reply.
+              </template>
+              <template v-else-if="isExpired(message)">
+                This checkpoint is no longer stored on disk.
+              </template>
+              <template v-else>Snapshot taken before the agent wrote these files.</template>
+            </p>
           </div>
         </template>
       </div>
@@ -420,6 +520,91 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
+}
+.checkpoint-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.checkpoint-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text);
+  min-width: 0;
+}
+.checkpoint-head svg {
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.checkpoint-title {
+  font-weight: 600;
+}
+.checkpoint-count {
+  color: var(--text-faint);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.checkpoint-restored {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  color: var(--green);
+  white-space: nowrap;
+}
+.checkpoint-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 132px;
+  overflow: auto;
+}
+.checkpoint-files li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  min-width: 0;
+}
+.file-state {
+  width: 14px;
+  flex: 0 0 auto;
+  text-align: center;
+  border-radius: 3px;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.file-state.added {
+  color: var(--green);
+}
+.file-rel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-tag {
+  margin-left: auto;
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+}
+.checkpoint-note {
+  margin: 0;
+  font-size: 10px;
+  color: var(--text-faint);
 }
 .approvals {
   display: flex;

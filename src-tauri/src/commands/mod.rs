@@ -1,5 +1,6 @@
 pub mod ai;
 pub mod browser;
+pub mod checkpoint;
 pub mod db;
 pub mod docker;
 pub mod exec;

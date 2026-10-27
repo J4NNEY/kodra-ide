@@ -15,6 +15,7 @@ public screenshots and the UI is written from scratch.
 | Workspace | Native folder picker, file tree with inline create/rename/delete, fuzzy search, project-wide grep |
 | Source control | Git status, stage/unstage, commit, branch switch, history, diff preview |
 | Agent | Streaming chat with OpenAI-compatible and Anthropic providers, tool calling (`list_dir`, `read_file`, `write_file`, `search_files`, `grep`, `run_command`, `read_skill`), inline approval cards, cancellation |
+| Checkpoints | Every agent file write snapshots the previous contents first; chat replies show a Restore card with the touched files and the Agent pane lists recent changes |
 | Skills | Discovers `SKILL.md` bundles in `.kudo/skills`, `.claude/skills` and the user config dir; catalog injected into the agent prompt |
 | Database | SQLite browser (tables, schema, paging), SQL console with history, CSV export via native save dialog |
 | Browser | In-app preview overlay, address bar, request inspector run in Rust (no CORS), open in system browser |
@@ -69,8 +70,8 @@ src-tauri/
 
 ## Backend command groups
 
-`workspace` · `pty` · `exec` · `git` · `ai` · `settings` · `db` · `browser` · `mcp` · `lsp` · `docker` ·
-`skills` · `updater` · `netlog`. All commands are registered in `src-tauri/src/lib.rs`.
+`workspace` · `pty` · `exec` · `git` · `ai` · `checkpoint` · `settings` · `db` · `browser` · `mcp` · `lsp` ·
+`docker` · `skills` · `updater` · `netlog`. All commands are registered in `src-tauri/src/lib.rs`.
 
 ## Agent safety model
 
@@ -80,6 +81,11 @@ src-tauri/
   traversal and symlinks that escape the workspace.
 - `run_command` is sandboxed to the workspace directory, uses a 120 s timeout and is killed when
   Kudo exits.
+- Before an agent write, `checkpoint_snapshot` copies the file into
+  `<app config>/checkpoints/<workspace>/<id>/` (outside the project, so it never shows up in git).
+  Files that did not exist yet are recorded as absent. **Restore** in the chat card or the Agent
+  pane replays the snapshot in reverse: files get their old contents back and files the agent
+  created are deleted. The latest 40 checkpoints per workspace are kept, older ones are pruned.
 
 ## Development notes
 

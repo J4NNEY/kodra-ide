@@ -1,21 +1,47 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import {
   Bot,
   Check,
   ChevronRight,
   CircleDot,
+  History,
   MessagesSquare,
   Settings2,
   Sparkles,
+  Undo2,
   Wrench
 } from 'lucide-vue-next'
 
 const ide = useIde()
 const chat = useChat()
+const checkpoints = useCheckpoints()
 const settingsTab = useState<string>('kudo:settings-tab', () => 'appearance')
 
 const recent = computed(() => chat.messages.value.slice(-4).reverse())
+
+function loadCheckpoints() {
+  if (ide.workspace.value) checkpoints.list(8)
+}
+
+onMounted(loadCheckpoints)
+watch(() => ide.workspace.value?.path, loadCheckpoints)
+watch(() => checkpoints.turnId.value, (id) => {
+  if (id) checkpoints.list(8)
+})
+
+function checkpointTime(ts: number) {
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+async function restoreCheckpoint(id: string) {
+  const result = await checkpoints.restore(id)
+  if (!result) return
+  for (const message of chat.messages.value) {
+    if (message.checkpointId === id) message.restoredAt = Date.now()
+  }
+  chat.persist()
+}
 
 const tools = [
   { name: 'list_dir', description: 'Browse workspace folders' },
@@ -113,6 +139,30 @@ function snippet(text: string) {
           <span class="tool-desc">{{ tool.description }}</span>
         </div>
       </div>
+
+      <template v-if="checkpoints.recent.value.length">
+        <div class="section-label">
+          <History :size="10" style="vertical-align: -1px" /> Recent changes
+        </div>
+        <div v-for="entry in checkpoints.recent.value" :key="entry.id" class="checkpoint-row">
+          <div class="cp-main">
+            <span class="cp-label">{{ entry.label || 'Agent edit' }}</span>
+            <span class="cp-meta">
+              {{ entry.files.length }} {{ entry.files.length === 1 ? 'file' : 'files' }} ·
+              {{ checkpointTime(entry.createdAt) }}
+              <span v-if="entry.files.every((f) => !f.changed)" class="cp-state">· restored</span>
+            </span>
+          </div>
+          <button
+            class="icon-btn"
+            title="Restore these files"
+            :disabled="checkpoints.loading.value"
+            @click="restoreCheckpoint(entry.id)"
+          >
+            <Undo2 :size="12" />
+          </button>
+        </div>
+      </template>
 
       <template v-if="recent.length">
         <div class="section-label">Recent activity</div>
@@ -268,6 +318,39 @@ function snippet(text: string) {
 .tool-desc {
   font-size: 10.5px;
   color: var(--text-faint);
+}
+.checkpoint-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+.checkpoint-row:hover {
+  background: var(--glass);
+  border-color: var(--border);
+}
+.cp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.cp-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cp-meta {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+.cp-state {
+  color: var(--green);
 }
 .recent {
   display: flex;

@@ -123,6 +123,10 @@ export interface ChatMessage {
   error?: boolean
   createdAt: number
   meta?: string
+  /** Checkpoint created before the tools in this reply touched files. */
+  checkpointId?: string
+  /** When the user rolled the checkpoint back. */
+  restoredAt?: number
 }
 
 export interface EditorTab {
