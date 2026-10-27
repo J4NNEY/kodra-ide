@@ -93,6 +93,8 @@ pub fn run() {
             commands::lsp::lsp_request,
             commands::lsp::lsp_notify,
             commands::lsp::lsp_complete,
+            commands::lsp::lsp_sessions,
+            commands::lsp::lsp_detect,
             // docker
             commands::docker::docker_info,
             commands::docker::docker_containers,

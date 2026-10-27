@@ -4,6 +4,7 @@ import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
 const ide = useIde()
 const git = useGit()
 const chat = useChat()
+const lsp = useLsp()
 
 // Overlays and heavy panes are split out of the entry bundle.
 const CommandPalette = defineAsyncComponent(() => import('./components/CommandPalette.vue'))
@@ -42,6 +43,8 @@ onMounted(async () => {
   ide.applyTheme()
   await ide.init()
   chat.load()
+  void lsp.detect()
+  void lsp.listen()
   await git.refresh()
   booting.value = false
 })
@@ -49,6 +52,7 @@ onMounted(async () => {
 watch(
   () => ide.workspace.value?.path,
   async () => {
+    lsp.reset()
     chat.load()
     await git.refresh()
   }

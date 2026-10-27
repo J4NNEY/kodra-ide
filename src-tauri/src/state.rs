@@ -155,12 +155,16 @@ pub struct McpSession {
 }
 
 pub struct LspSession {
-    pub child: tokio::process::Child,
-    pub stdin: tokio::process::ChildStdin,
-    pub reader: tokio::io::BufReader<tokio::process::ChildStdout>,
-    pub next_id: i64,
+    /// Kept alive so the child is killed when the session is dropped.
+    pub child: tokio::sync::Mutex<tokio::process::Child>,
+    pub stdin: tokio::sync::Mutex<tokio::process::ChildStdin>,
+    pub pending:
+        Mutex<HashMap<i64, tokio::sync::oneshot::Sender<Result<serde_json::Value, String>>>>,
+    pub next_id: std::sync::atomic::AtomicI64,
     pub timeout_secs: u64,
-    pub opened: HashMap<String, i64>,
+    pub opened: Mutex<HashMap<String, i64>>,
+    pub name: String,
+    pub root_uri: Option<String>,
 }
 
 #[derive(Default)]
@@ -172,7 +176,7 @@ pub struct AppState {
     pub config_dir: RwLock<PathBuf>,
     pub dbs: Mutex<HashMap<String, DbSession>>,
     pub mcp: tokio::sync::Mutex<HashMap<String, McpSession>>,
-    pub lsp: tokio::sync::Mutex<HashMap<String, LspSession>>,
+    pub lsp: tokio::sync::Mutex<HashMap<String, Arc<LspSession>>>,
     pub netlog: Mutex<Vec<crate::commands::netlog::NetEntry>>,
     pub net_seq: std::sync::atomic::AtomicU64,
 }

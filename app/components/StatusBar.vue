@@ -13,6 +13,7 @@ import { call, isTauri } from '../lib/api'
 
 const ide = useIde()
 const git = useGit()
+const lsp = useLsp()
 const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
 const info = useState<{ name: string; version: string; platform: string } | null>(
   'kudo:app-info',
@@ -96,12 +97,12 @@ onMounted(async () => {
 
     <span class="spacer" />
 
-    <span class="status-item" title="Problems">
+    <button class="status-item clickable" title="Problems" @click="ide.togglePanel('problems')">
       <CircleCheck :size="12" style="color: var(--green)" />
-      0
+      {{ lsp.errorCount.value }}
       <AlertCircle :size="12" style="color: var(--text-faint); margin-left: 4px" />
-      0
-    </span>
+      {{ lsp.warningCount.value }}
+    </button>
 
     <span v-if="git.status.value?.files.length" class="status-item" title="Changed files">
       {{ git.status.value.files.length }} changes

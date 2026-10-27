@@ -176,13 +176,15 @@ export function languageFor(path: string): string {
     less: 'css',
     py: 'python',
     rs: 'rust',
+    go: 'go',
     toml: 'toml',
     yml: 'yaml',
     yaml: 'yaml',
     sh: 'shell',
     ps1: 'powershell',
     ahk: 'autohotkey',
-    sql: 'sql'
+    sql: 'sql',
+    dockerfile: 'dockerfile'
   }
   return map[ext] ?? 'plaintext'
 }

@@ -20,6 +20,7 @@ import type { Settings, UpdateCheck } from '../lib/types'
 import { call } from '../lib/api'
 
 const ide = useIde()
+const lsp = useLsp()
 const settingsTab = useState<string>('kudo:settings-tab', () => 'appearance')
 
 interface AppInfo {
@@ -348,6 +349,33 @@ watch(
                   :class="{ on: draft.restoreSession }"
                   @click="draft.restoreSession = !draft.restoreSession"
                 />
+              </div>
+
+              <div class="pane-title" style="margin-top: 18px">Language servers</div>
+              <div class="field">
+                <span class="hint">
+                  Kudo starts a language server for a file's language when one is installed. Detected
+                  automatically from PATH.
+                </span>
+                <div class="lsp-list">
+                  <div v-for="spec in lsp.specs.value" :key="spec.name" class="lsp-row">
+                    <div class="lsp-main">
+                      <span class="lsp-name">{{ spec.name }}</span>
+                      <span class="lsp-langs">{{ spec.languages.join(', ') }}</span>
+                    </div>
+                    <span v-if="spec.path" class="lsp-path" :title="spec.path">{{ spec.path }}</span>
+                    <span v-else class="lsp-missing">not installed · {{ spec.install }}</span>
+                    <button
+                      class="switch"
+                      :class="{ on: spec.enabled }"
+                      :title="spec.enabled ? 'Disable' : 'Enable'"
+                      @click="lsp.toggle(spec.name, !spec.enabled)"
+                    />
+                  </div>
+                </div>
+                <button class="btn ghost sm" style="align-self: flex-start" @click="lsp.detect()">
+                  Rescan PATH
+                </button>
               </div>
             </template>
 
@@ -930,5 +958,51 @@ watch(
   to {
     transform: rotate(360deg);
   }
+}
+.lsp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.lsp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--glass);
+}
+.lsp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 190px;
+}
+.lsp-name {
+  font-size: 12px;
+  color: var(--text);
+}
+.lsp-langs {
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.lsp-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+.lsp-missing {
+  flex: 1;
+  min-width: 0;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  opacity: 0.85;
 }
 </style>

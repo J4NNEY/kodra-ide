@@ -33,6 +33,11 @@ import {
   closeBracketsKeymap,
   completionKeymap
 } from '@codemirror/autocomplete'
+import { forceLinting, lintGutter, linter } from '@codemirror/lint'
+import type { Diagnostic as CmDiagnostic } from '@codemirror/lint'
+import { hoverTooltip } from '@codemirror/view'
+import type { Text } from '@codemirror/state'
+import { renderMarkdown } from '../lib/markdown'
 import { tags as t } from '@lezer/highlight'
 import { javascript } from '@codemirror/lang-javascript'
 import { json } from '@codemirror/lang-json'
@@ -41,6 +46,13 @@ import { html } from '@codemirror/lang-html'
 import { markdown } from '@codemirror/lang-markdown'
 import { python } from '@codemirror/lang-python'
 import { rust } from '@codemirror/lang-rust'
+import { StreamLanguage } from '@codemirror/language'
+import { go } from '@codemirror/legacy-modes/mode/go'
+import { yaml } from '@codemirror/legacy-modes/mode/yaml'
+import { toml } from '@codemirror/legacy-modes/mode/toml'
+import { standardSQL } from '@codemirror/legacy-modes/mode/sql'
+import { shell } from '@codemirror/legacy-modes/mode/shell'
+import { dockerFile } from '@codemirror/legacy-modes/mode/dockerfile'
 import type { EditorTab } from '../lib/types'
 
 const props = defineProps<{ tab: EditorTab; gotoLine?: number | null }>()
@@ -51,12 +63,14 @@ const emit = defineEmits<{
 }>()
 
 const ide = useIde()
+const lsp = useLsp()
 const effectiveTheme = useEffectiveTheme()
 const host = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
 const wrapCompartment = new Compartment()
 const tabCompartment = new Compartment()
 const highlightCompartment = new Compartment()
+let syncTimer: ReturnType<typeof setTimeout> | null = null
 
 const darkHighlight = HighlightStyle.define([
   { tag: t.keyword, color: '#c792ea' },
@@ -117,6 +131,18 @@ function languageFor(language: string) {
       return python()
     case 'rust':
       return rust()
+    case 'go':
+      return StreamLanguage.define(go)
+    case 'yaml':
+      return StreamLanguage.define(yaml)
+    case 'toml':
+      return StreamLanguage.define(toml)
+    case 'sql':
+      return StreamLanguage.define(standardSQL)
+    case 'shell':
+      return StreamLanguage.define(shell)
+    case 'dockerfile':
+      return StreamLanguage.define(dockerFile)
     default:
       return []
   }
@@ -167,6 +193,96 @@ function jumpTo(line?: number | null) {
   view.focus()
 }
 
+function offsetAt(doc: Text, line: number, column: number) {
+  const number = Math.min(Math.max(1, line), doc.lines)
+  const target = doc.line(number)
+  return Math.min(target.to, target.from + Math.max(0, column - 1))
+}
+
+/** Translate the stored LSP diagnostics into CodeMirror diagnostics. */
+function cmDiagnostics(): CmDiagnostic[] {
+  if (!view) return []
+  const doc = view.state.doc
+  return lsp.diagnosticsFor(props.tab.path).map((item) => {
+    const from = offsetAt(doc, item.line, item.column)
+    const to = Math.max(from + 1, offsetAt(doc, item.endLine, item.endColumn))
+    return {
+      from: Math.min(from, doc.length),
+      to: Math.min(to, doc.length),
+      severity: item.severity === 'hint' ? 'info' : item.severity,
+      message: item.message,
+      source: item.source || 'lsp'
+    }
+  })
+}
+
+function scheduleSync() {
+  if (syncTimer) clearTimeout(syncTimer)
+  syncTimer = setTimeout(() => {
+    syncTimer = null
+    if (!view) return
+    void lsp.changeDocument(props.tab.path, view.state.doc.toString())
+  }, 250)
+}
+
+async function goToDefinition(pos?: number) {
+  if (!view) return
+  const at = pos ?? view.state.selection.main.head
+  const line = view.state.doc.lineAt(at)
+  const target = await lsp.definition(
+    props.tab.path,
+    line.number - 1,
+    at - line.from,
+    view.state.doc.toString()
+  )
+  if (target?.path) await ide.openFile(target.path, target.line)
+}
+
+function lspExtensions() {
+  if (!lsp.isSupported(props.tab.language)) return []
+  return [
+    autocompletion({
+      override: [lsp.completionSource(props.tab.path)],
+      activateOnTyping: true
+    }),
+    hoverTooltip(
+      async (editor, pos) => {
+        const line = editor.state.doc.lineAt(pos)
+        const markdown = await lsp.hover(
+          props.tab.path,
+          line.number - 1,
+          pos - line.from,
+          editor.state.doc.toString()
+        )
+        if (!markdown.trim()) return null
+        return {
+          pos,
+          end: Math.min(line.to, pos + 1),
+          create() {
+            const dom = document.createElement('div')
+            dom.className = 'cm-kudo-hover'
+            dom.innerHTML = renderMarkdown(markdown)
+            return { dom }
+          }
+        }
+      },
+      { hoverTime: 280 }
+    ),
+    linter(cmDiagnostics, { delay: 250 }),
+    lintGutter(),
+    EditorView.domEventHandlers({
+      click(event, editor) {
+        if (!event.ctrlKey && !event.metaKey) return false
+        const pos = editor.posAtCoords({ x: event.clientX, y: event.clientY })
+        if (pos == null) return false
+        event.preventDefault()
+        void goToDefinition(pos)
+        return true
+      }
+    })
+  ]
+}
+
 onMounted(() => {
   if (!host.value) return
   view = new EditorView({
@@ -185,7 +301,7 @@ onMounted(() => {
         indentOnInput(),
         bracketMatching(),
         closeBrackets(),
-        autocompletion(),
+        ...(lsp.isSupported(props.tab.language) ? lspExtensions() : [autocompletion()]),
         highlightSelectionMatches(),
         highlightActiveLine(),
         highlightCompartment.of(activeHighlight()),
@@ -201,6 +317,14 @@ onMounted(() => {
               return true
             }
           },
+          {
+            key: 'F12',
+            preventDefault: true,
+            run: () => {
+              void goToDefinition()
+              return true
+            }
+          },
           ...closeBracketsKeymap,
           ...defaultKeymap,
           ...searchKeymap,
@@ -210,7 +334,10 @@ onMounted(() => {
           indentWithTab
         ]),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) emit('change', update.state.doc.toString())
+          if (update.docChanged) {
+            emit('change', update.state.doc.toString())
+            scheduleSync()
+          }
           if (update.docChanged || update.selectionSet) reportCursor(update.state)
         }),
         languageFor(props.tab.language)
@@ -222,9 +349,17 @@ onMounted(() => {
   reportCursor(view.state)
   if (props.gotoLine) jumpTo(props.gotoLine)
   view.focus()
+  if (!props.tab.binary) {
+    void lsp.openDocument(props.tab.path, props.tab.language, props.tab.content)
+  }
 })
 
 onBeforeUnmount(() => {
+  if (syncTimer) {
+    clearTimeout(syncTimer)
+    syncTimer = null
+  }
+  void lsp.closeDocument(props.tab.path)
   if (view && props.tab) props.tab.scrollTop = view.scrollDOM.scrollTop
   view?.destroy()
   view = null
@@ -260,6 +395,15 @@ watch(
 watch(effectiveTheme, () => {
   view?.dispatch({ effects: highlightCompartment.reconfigure(activeHighlight()) })
 })
+
+// Language servers publish diagnostics asynchronously; re-run the linter so
+// squiggles and the gutter update without waiting for the next edit.
+watch(
+  () => lsp.diagnostics.value[props.tab.path],
+  () => {
+    if (view) forceLinting(view)
+  }
+)
 
 watch(
   () => props.gotoLine,

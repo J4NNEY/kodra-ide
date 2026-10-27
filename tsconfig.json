@@ -1,0 +1,6 @@
+{
+  "//": "Extends the generated Nuxt config but keeps Rust build artefacts out of type checking.",
+  "extends": "./.nuxt/tsconfig.json",
+  "include": ["app/**/*", ".config/nuxt.*", ".nuxt/nuxt.d.ts", "*"],
+  "exclude": ["src-tauri", "dist", ".data", "node_modules", ".output"]
+}

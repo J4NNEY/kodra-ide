@@ -19,7 +19,7 @@ public screenshots and the UI is written from scratch.
 | Database | SQLite browser (tables, schema, paging), SQL console with history, CSV export via native save dialog |
 | Browser | In-app preview overlay, address bar, request inspector run in Rust (no CORS), open in system browser |
 | MCP | stdio JSON-RPC client, server presets, connect/disconnect, tool list and a tool runner |
-| LSP | Generic client (Content-Length framing): start/stop, request/notify, document sync + completion |
+| LSP | Language servers on PATH (rust-analyzer, gopls, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion, hover docs, go-to-definition (`F12`/`Ctrl+click`), diagnostics as squiggles plus a Problems panel and status-bar counts |
 | Docker | Containers/images tabs, start/stop/restart, logs, run image |
 | Network | Live request log (AI calls, browser fetches, update checks) in the bottom panel |
 | Updater | Feed check, download to temp, launch installer, reveal in Explorer (see `docs/updater.md`) |
@@ -39,8 +39,13 @@ pnpm dev          # browser-only preview; backend calls are mocked (app/lib/mock
 pnpm desktop      # real Tauri window with the Rust backend
 pnpm build        # static frontend build -> .output/public
 pnpm desktop:build # production installer (NSIS)
-pnpm exec vue-tsc --noEmit -p .nuxt/tsconfig.json   # typecheck
+pnpm exec vue-tsc --noEmit -p tsconfig.json   # typecheck (excludes src-tauri build output)
 ```
+
+Language servers are discovered from `PATH`; install the one for your language
+(for example `rustup component add rust-analyzer`, or
+`go install golang.org/x/tools/gopls@latest`). `Settings → Editor → Language servers` lists
+what was found and lets you disable a server for the session.
 
 `pnpm dev` runs entirely in the browser: `app/lib/mock.ts` provides a virtual workspace and canned
 responses for every backend command, so the UI can be developed without the Tauri shell.

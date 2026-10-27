@@ -7,8 +7,10 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Eraser, Plus, SquareTerminal, Trash2, X } from 'lucide-vue-next'
 import { call, isTauri, listen } from '../lib/api'
 import { useTerminalEpoch } from '../composables/useCommands'
+import ProblemsPanel from './ProblemsPanel.vue'
 
 const ide = useIde()
+const lsp = useLsp()
 const { lines: outputLines, push: pushOutput, clear: clearOutput } = useOutputLog()
 const epoch = useTerminalEpoch()
 const effectiveTheme = useEffectiveTheme()
@@ -357,7 +359,7 @@ function stamp(ms: number) {
         :class="{ active: ide.panelTab.value === 'problems' }"
         @click="ide.panelTab.value = 'problems'"
       >
-        Problems <span class="tab-count">0</span>
+        Problems <span class="tab-count">{{ lsp.allDiagnostics.value.length }}</span>
       </button>
       <button
         class="panel-tab"
@@ -391,7 +393,7 @@ function stamp(ms: number) {
     <div v-show="ide.panelTab.value === 'terminal'" ref="host" class="terminal-host" />
 
     <div v-if="ide.panelTab.value === 'problems'" class="panel-body">
-      <div class="panel-empty">No problems have been detected in the workspace.</div>
+      <ProblemsPanel />
     </div>
 
     <div v-if="ide.panelTab.value === 'output'" class="panel-body">
