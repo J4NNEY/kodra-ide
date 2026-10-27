@@ -310,8 +310,13 @@ watch(epoch, () => {
 
 watch(
   () => ide.workspace.value?.path,
-  (next) => {
-    if (next && next !== bootedPath && ide.panelVisible.value) boot()
+  async (next) => {
+    if (next === bootedPath) return
+    // Switching folders must release the old PTY: Windows keeps the working
+    // directory locked, which blocks removing git worktrees.
+    await teardown()
+    bootedPath = null
+    if (next && ide.panelVisible.value) await boot()
   }
 )
 
@@ -320,6 +325,10 @@ watch(
   async (visible) => {
     if (!visible) return
     await nextTick()
+    if (!term) {
+      await boot()
+      return
+    }
     safeFit()
     term?.focus()
   }

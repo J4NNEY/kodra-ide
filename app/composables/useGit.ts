@@ -1,4 +1,4 @@
-import type { Branch, Commit, GitStatus } from '../lib/types'
+import type { Branch, Commit, GitStatus, Worktree } from '../lib/types'
 import { call } from '../lib/api'
 
 const LETTER: Record<string, string> = {
@@ -16,6 +16,7 @@ export function useGit() {
   const status = useState<GitStatus | null>('kudo:git-status', () => null)
   const branches = useState<Branch[]>('kudo:git-branches', () => [])
   const log = useState<Commit[]>('kudo:git-log', () => [])
+  const worktrees = useState<Worktree[]>('kudo:git-worktrees', () => [])
   const loading = useState<boolean>('kudo:git-loading', () => false)
   const error = useState<string>('kudo:git-error', () => '')
   const ide = useIde()
@@ -70,6 +71,37 @@ export function useGit() {
     } catch {
       log.value = []
     }
+  }
+
+  async function loadWorktrees() {
+    if (!ide.workspace.value?.isGit) {
+      worktrees.value = []
+      return
+    }
+    try {
+      worktrees.value = (await call<Worktree[]>('git_worktrees')) ?? []
+    } catch {
+      worktrees.value = []
+    }
+  }
+
+  async function addWorktree(path: string, branch: string, base?: string) {
+    const out = await call<string>('git_worktree_add', { path, branch, base })
+    await loadWorktrees()
+    await loadBranches()
+    return out
+  }
+
+  async function removeWorktree(path: string, force = false) {
+    const out = await call<string>('git_worktree_remove', { path, force })
+    await loadWorktrees()
+    return out
+  }
+
+  async function pruneWorktrees() {
+    const out = await call<string>('git_worktree_prune')
+    await loadWorktrees()
+    return out
   }
 
   async function stage(files: string[]) {
@@ -133,6 +165,7 @@ export function useGit() {
     status,
     branches,
     log,
+    worktrees,
     loading,
     error,
     marks,
@@ -141,6 +174,10 @@ export function useGit() {
     refresh,
     loadBranches,
     loadLog,
+    loadWorktrees,
+    addWorktree,
+    removeWorktree,
+    pruneWorktrees,
     stage,
     unstage,
     stageAll,

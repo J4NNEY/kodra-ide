@@ -1,8 +1,9 @@
 use serde::Serialize;
+use std::path::{Path, PathBuf};
 use tauri::State;
 
 use crate::state::AppState;
-use crate::util::{git, resolve_in_workspace};
+use crate::util::{display_path, git, resolve_in_workspace};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -259,4 +260,207 @@ pub async fn git_fetch(state: State<'_, AppState>) -> Result<String, String> {
     tokio::task::spawn_blocking(move || git(&root, &["fetch", "--all", "--prune"]))
         .await
         .map_err(|e| e.to_string())?
+}
+
+/* ------------------------------------------------------------- worktrees */
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Worktree {
+    /// Absolute path of the worktree.
+    pub path: String,
+    pub head: String,
+    pub short: String,
+    /// Branch name when attached (refs/heads/ stripped).
+    pub branch: Option<String>,
+    pub detached: bool,
+    pub bare: bool,
+    /// Reason when the worktree is locked.
+    pub locked: Option<String>,
+    /// Reason when git considers the worktree prunable (folder gone).
+    pub prunable: Option<String>,
+    /// The worktree that owns the repository (first entry).
+    pub main: bool,
+    /// The worktree currently open as the workspace.
+    pub current: bool,
+}
+
+#[derive(Default)]
+struct WorktreeBuilder {
+    path: String,
+    head: String,
+    branch: Option<String>,
+    detached: bool,
+    bare: bool,
+    locked: Option<String>,
+    prunable: Option<String>,
+}
+
+fn flush_worktree(
+    builder: WorktreeBuilder,
+    out: &mut Vec<Worktree>,
+    current: &str,
+) {
+    if builder.path.is_empty() {
+        return;
+    }
+    let mut path = display_path(Path::new(&builder.path))
+        .to_string_lossy()
+        .to_string();
+    #[cfg(windows)]
+    {
+        path = path.replace('/', "\\");
+    }
+    let main = out.is_empty();
+    let short = builder.head.chars().take(7).collect::<String>();
+    let is_current = normalise_path(&path) == current;
+    out.push(Worktree {
+        path,
+        head: builder.head,
+        short,
+        branch: builder.branch,
+        detached: builder.detached,
+        bare: builder.bare,
+        locked: builder.locked,
+        prunable: builder.prunable,
+        main,
+        current: is_current,
+    });
+}
+
+fn worktree_entries(root: &Path) -> Result<Vec<Worktree>, String> {
+    let raw = git(root, &["worktree", "list", "--porcelain"])?;
+    let current = normalise_path(&root.to_string_lossy());
+    let mut out = Vec::new();
+    let mut builder = WorktreeBuilder::default();
+    for line in raw.lines() {
+        if line.trim().is_empty() {
+            let filled = std::mem::take(&mut builder);
+            flush_worktree(filled, &mut out, &current);
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("worktree ") {
+            // Defensive: start a new block even without a blank separator.
+            if !builder.path.is_empty() {
+                let filled = std::mem::take(&mut builder);
+                flush_worktree(filled, &mut out, &current);
+            }
+            builder.path = rest.trim().to_string();
+        } else if let Some(rest) = line.strip_prefix("HEAD ") {
+            builder.head = rest.trim().to_string();
+        } else if let Some(rest) = line.strip_prefix("branch ") {
+            builder.branch = Some(rest.trim().trim_start_matches("refs/heads/").to_string());
+        } else if line.trim() == "detached" {
+            builder.detached = true;
+        } else if line.trim() == "bare" {
+            builder.bare = true;
+        } else if let Some(rest) = line.strip_prefix("locked") {
+            builder.locked = Some(rest.trim().to_string());
+        } else if let Some(rest) = line.strip_prefix("prunable") {
+            builder.prunable = Some(rest.trim().to_string());
+        }
+    }
+    let filled = std::mem::take(&mut builder);
+    flush_worktree(filled, &mut out, &current);
+    Ok(out)
+}
+
+#[tauri::command]
+pub fn git_worktrees(state: State<'_, AppState>) -> Result<Vec<Worktree>, String> {
+    let root = state.workspace_root()?;
+    worktree_entries(&root)
+}
+
+fn normalise_path(path: &str) -> String {
+    let out = display_path(Path::new(path)).to_string_lossy().to_lowercase();
+    #[cfg(windows)]
+    let out = out.replace('/', "\\");
+    out.trim_end_matches(std::path::MAIN_SEPARATOR).to_string()
+}
+
+/// Add a worktree. `branch` is required: an existing branch is checked out,
+/// otherwise it is created from `base` (default: the current HEAD).
+#[tauri::command]
+pub fn git_worktree_add(
+    path: String,
+    branch: String,
+    base: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let root = state.workspace_root()?;
+    let branch = branch.trim();
+    if branch.is_empty() {
+        return Err("a branch name is required".into());
+    }
+    let target = PathBuf::from(path.trim());
+    if !target.is_absolute() {
+        return Err("the worktree folder must be an absolute path".into());
+    }
+    let target = display_path(&target);
+    let target_norm = normalise_path(&target.to_string_lossy());
+    let root_norm = normalise_path(&root.to_string_lossy());
+    if target_norm == root_norm
+        || target_norm.starts_with(&format!("{root_norm}{}", std::path::MAIN_SEPARATOR))
+    {
+        return Err("pick a folder outside the current workspace".into());
+    }
+    let target_arg = target.to_string_lossy().to_string();
+    let base = base.unwrap_or_default();
+    let base = base.trim();
+
+    let branch_exists = git(&root, &["rev-parse", "--verify", &format!("refs/heads/{branch}")]).is_ok();
+    if branch_exists {
+        return git(&root, &["worktree", "add", &target_arg, branch]);
+    }
+    if base.is_empty() {
+        git(&root, &["worktree", "add", "-b", branch, &target_arg])
+    } else {
+        git(&root, &["worktree", "add", "-b", branch, &target_arg, base])
+    }
+}
+
+#[tauri::command]
+pub fn git_worktree_remove(
+    path: String,
+    force: Option<bool>,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let root = state.workspace_root()?;
+    let wanted = normalise_path(&path);
+    let entries = worktree_entries(&root)?;
+    let found = entries
+        .iter()
+        .find(|w| normalise_path(&w.path) == wanted)
+        .ok_or("that folder is not a worktree of this repository")?;
+    if found.current {
+        return Err("you cannot remove the worktree that is currently open".into());
+    }
+    if found.main {
+        return Err("the main worktree cannot be removed".into());
+    }
+    let mut args = vec!["worktree".to_string(), "remove".to_string()];
+    if force.unwrap_or(false) {
+        args.push("--force".to_string());
+    }
+    args.push(found.path.clone());
+    let refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    git(&root, &refs)
+}
+
+/// Remove metadata for worktrees whose folder was deleted outside Kudo.
+#[tauri::command]
+pub fn git_worktree_prune(state: State<'_, AppState>) -> Result<String, String> {
+    let root = state.workspace_root()?;
+    let stale = worktree_entries(&root)?
+        .iter()
+        .filter(|w| w.prunable.is_some())
+        .count();
+    git(&root, &["worktree", "prune"])?;
+    Ok(if stale == 0 {
+        "Nothing to prune".to_string()
+    } else if stale == 1 {
+        "Pruned 1 stale worktree".to_string()
+    } else {
+        format!("Pruned {stale} stale worktrees")
+    })
 }

@@ -136,7 +136,7 @@ pub fn pty_resize(id: String, cols: u16, rows: u16, state: State<'_, AppState>) 
 #[tauri::command]
 pub fn pty_kill(id: String, state: State<'_, AppState>) -> Result<(), String> {
     if let Some(mut session) = state.ptys.lock().remove(&id) {
-        let _ = session.child.kill();
+        session.terminate();
     }
     Ok(())
 }

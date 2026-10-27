@@ -140,6 +140,23 @@ pub struct PtySession {
     pub master: Box<dyn portable_pty::MasterPty + Send>,
 }
 
+impl PtySession {
+    /// Kill the shell and everything it started. ConPTY children survive a bare
+    /// `child.kill()`, which leaves folders locked (and breaks worktree removal).
+    pub fn terminate(&mut self) {
+        #[cfg(windows)]
+        if let Some(pid) = self.child.process_id() {
+            let _ = std::process::Command::new("taskkill")
+                .args(["/PID", &pid.to_string(), "/T", "/F"])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status();
+        }
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
 pub struct DbSession {
     pub conn: rusqlite::Connection,
 }
@@ -240,6 +257,17 @@ impl AppState {
         let overflow = log.len().saturating_sub(500);
         if overflow > 0 {
             log.drain(0..overflow);
+        }
+    }
+}
+
+impl Drop for AppState {
+    fn drop(&mut self) {
+        // Kill terminal shells so no process keeps a workspace folder locked
+        // after Kudo exits.
+        let mut sessions = self.ptys.lock();
+        for (_, mut session) in sessions.drain() {
+            session.terminate();
         }
     }
 }

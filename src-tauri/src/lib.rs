@@ -50,6 +50,10 @@ pub fn run() {
             commands::git::git_push,
             commands::git::git_pull,
             commands::git::git_fetch,
+            commands::git::git_worktrees,
+            commands::git::git_worktree_add,
+            commands::git::git_worktree_remove,
+            commands::git::git_worktree_prune,
             // terminal
             commands::pty::pty_spawn,
             commands::pty::pty_write,

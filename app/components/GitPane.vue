@@ -4,6 +4,9 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   GitBranch,
+  FolderGit2,
+  ExternalLink,
+  Trash2,
   Plus,
   Minus,
   RotateCcw,
@@ -11,7 +14,7 @@ import {
   History,
   X
 } from 'lucide-vue-next'
-import type { GitFile } from '../lib/types'
+import type { GitFile, Worktree } from '../lib/types'
 import { call, basename, dirname, relativeTo } from '../lib/api'
 
 const ide = useIde()
@@ -24,12 +27,83 @@ const newBranch = ref('')
 const diff = ref<{ file: string; text: string } | null>(null)
 const showLog = ref(false)
 
+const showWorktrees = ref(true)
+const wtBranch = ref('')
+const wtPath = ref('')
+const wtBusy = ref(false)
+
 const staged = computed(() => git.status.value?.files.filter((f) => f.staged) ?? [])
 const unstaged = computed(() => git.status.value?.files.filter((f) => !f.staged) ?? [])
+
+function suggestWorktreePath() {
+  const ws = ide.workspace.value
+  if (!ws) return
+  const slug = wtBranch.value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  if (!slug) {
+    wtPath.value = ''
+    return
+  }
+  const sep = ws.path.includes('\\') ? '\\' : '/'
+  wtPath.value = [dirname(ws.path), `${basename(ws.path)}-${slug}`].join(sep)
+}
+
+async function createWorktree() {
+  if (!wtBranch.value.trim() || !wtPath.value.trim() || wtBusy.value) return
+  wtBusy.value = true
+  try {
+    await git.addWorktree(wtPath.value.trim(), wtBranch.value.trim())
+    ide.notify(`Worktree ready for ${wtBranch.value.trim()}`, 'success')
+    wtBranch.value = ''
+    wtPath.value = ''
+  } catch (err) {
+    ide.notify(String(err), 'error')
+  } finally {
+    wtBusy.value = false
+  }
+}
+
+async function removeWorktree(worktree: Worktree) {
+  if (worktree.current || worktree.main) return
+  if (!window.confirm(`Remove the worktree at ${worktree.path}? The branch itself is kept.`)) return
+  try {
+    await git.removeWorktree(worktree.path)
+    ide.notify('Worktree removed', 'success')
+  } catch (err) {
+    const force = window.confirm(
+      `${String(err)}\n\nForce remove it? Uncommitted changes in that folder will be lost.`
+    )
+    if (!force) return
+    try {
+      await git.removeWorktree(worktree.path, true)
+      ide.notify('Worktree force-removed', 'success')
+    } catch (err2) {
+      ide.notify(String(err2), 'error')
+    }
+  }
+}
+
+async function pruneWorktrees() {
+  try {
+    const out = await git.pruneWorktrees()
+    ide.notify(out.trim() || 'Nothing to prune', 'success')
+  } catch (err) {
+    ide.notify(String(err), 'error')
+  }
+}
+
+function openWorktree(worktree: Worktree) {
+  if (worktree.current) return
+  ide.openFolder(worktree.path)
+}
 
 async function refreshAll() {
   await git.refresh()
   await git.loadBranches()
+  await git.loadWorktrees()
   if (showLog.value) await git.loadLog()
 }
 
@@ -166,6 +240,63 @@ watch(() => ide.workspace.value?.path, refreshAll)
             <button class="btn sm" :disabled="!newBranch" @click="createBranch">Create</button>
           </div>
         </div>
+
+        <button class="log-toggle wt-toggle" @click="showWorktrees = !showWorktrees">
+          <FolderGit2 :size="12" />
+          Worktrees
+          <span class="wt-count">{{ git.worktrees.value.length }}</span>
+        </button>
+        <template v-if="showWorktrees">
+          <div v-for="worktree in git.worktrees.value" :key="worktree.path" class="wt-row">
+            <div class="col">
+              <span class="wt-branch">
+                <GitBranch :size="10" />
+                {{ worktree.branch ?? (worktree.detached ? 'detached' : 'bare') }}
+                <span v-if="worktree.main" class="wt-tag">main</span>
+                <span v-if="worktree.current" class="wt-tag current">open</span>
+              </span>
+              <span class="wt-path" :title="worktree.path">{{ basename(worktree.path) }}</span>
+            </div>
+            <div class="wt-actions">
+              <button
+                class="icon-btn"
+                title="Open this worktree"
+                :disabled="worktree.current"
+                @click="openWorktree(worktree)"
+              >
+                <ExternalLink :size="12" />
+              </button>
+              <button
+                class="icon-btn"
+                title="Remove worktree"
+                :disabled="worktree.current || worktree.main"
+                @click="removeWorktree(worktree)"
+              >
+                <Trash2 :size="12" />
+              </button>
+            </div>
+          </div>
+          <div class="wt-new">
+            <input
+              v-model="wtBranch"
+              class="input"
+              placeholder="New branch"
+              @input="suggestWorktreePath"
+            />
+            <input v-model="wtPath" class="input" placeholder="Worktree folder (absolute)" />
+            <button
+              class="btn sm"
+              :disabled="wtBusy || !wtBranch.trim() || !wtPath.trim()"
+              @click="createWorktree"
+            >
+              Create
+            </button>
+          </div>
+          <div class="wt-foot">
+            <span>New branches start at {{ git.status.value?.branch ?? 'HEAD' }}</span>
+            <button class="link-btn" @click="pruneWorktrees">Prune stale</button>
+          </div>
+        </template>
 
         <div class="commit-box">
           <textarea
@@ -352,6 +483,104 @@ watch(() => ide.workspace.value?.path, refreshAll)
 .new-branch .input {
   height: 26px;
   font-size: 11.5px;
+}
+.wt-toggle {
+  margin-top: 2px;
+}
+.wt-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.wt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 2px 3px 8px;
+  border-radius: 6px;
+}
+.wt-row:hover {
+  background: var(--glass);
+}
+.wt-row .col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.3;
+}
+.wt-branch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  min-width: 0;
+}
+.wt-branch svg {
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.wt-tag {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--glass);
+  color: var(--text-faint);
+}
+.wt-tag.current {
+  color: var(--green);
+}
+.wt-path {
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wt-actions {
+  display: flex;
+  opacity: 0;
+}
+.wt-row:hover .wt-actions {
+  opacity: 1;
+}
+.wt-new {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 4px 4px;
+}
+.wt-new .input {
+  height: 26px;
+  font-size: 11px;
+}
+.wt-new .btn {
+  align-self: flex-end;
+}
+.wt-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 8px;
+  font-size: 9.5px;
+  color: var(--text-faint);
+}
+.link-btn {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 9.5px;
+  cursor: pointer;
+  padding: 0;
+}
+.link-btn:hover {
+  text-decoration: underline;
 }
 .commit-box {
   display: flex;

@@ -62,6 +62,19 @@ export interface Branch {
   remote: boolean
 }
 
+export interface Worktree {
+  path: string
+  head: string
+  short: string
+  branch: string | null
+  detached: boolean
+  bare: boolean
+  locked: string | null
+  prunable: string | null
+  main: boolean
+  current: boolean
+}
+
 export interface Commit {
   hash: string
   short: string

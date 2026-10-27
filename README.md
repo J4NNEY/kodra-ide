@@ -13,7 +13,7 @@ public screenshots and the UI is written from scratch.
 | Editor | CodeMirror 6, syntax highlighting for 20+ languages, tabs, dirty state, quick open (`Ctrl+P`), go to line, find/replace in file |
 | Terminal | Real PTY (`portable-pty`), xterm.js, resizable panel, shells from settings (PowerShell by default on Windows) |
 | Workspace | Native folder picker, file tree with inline create/rename/delete, fuzzy search, project-wide grep |
-| Source control | Git status, stage/unstage, commit, branch switch, history, diff preview |
+| Source control | Git status, stage/unstage, commit, branch switch, history, diff preview, and worktrees (list, create on a new branch, open, remove, prune stale) |
 | Agent | Streaming chat with OpenAI-compatible and Anthropic providers, tool calling (`list_dir`, `read_file`, `write_file`, `search_files`, `grep`, `run_command`, `read_skill`), inline approval cards, cancellation |
 | Checkpoints | Every agent file write snapshots the previous contents first; chat replies show a Restore card with the touched files and the Agent pane lists recent changes |
 | Skills | Discovers `SKILL.md` bundles in `.kudo/skills`, `.claude/skills` and the user config dir; catalog injected into the agent prompt |
@@ -86,6 +86,14 @@ src-tauri/
   Files that did not exist yet are recorded as absent. **Restore** in the chat card or the Agent
   pane replays the snapshot in reverse: files get their old contents back and files the agent
   created are deleted. The latest 40 checkpoints per workspace are kept, older ones are pruned.
+
+## Worktrees
+
+Source Control → Worktrees lists every `git worktree` of the open repository. Creating one asks for
+a branch and a folder outside the workspace: existing branches are checked out, new ones start at
+the current HEAD. **Open** switches the workspace to that folder, **Remove** deletes the worktree
+(keeping the branch; folders with uncommitted changes need a forced removal), and **Prune stale**
+cleans up entries whose folder was deleted outside Kudo.
 
 ## Development notes
 
