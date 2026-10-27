@@ -1,0 +1,11 @@
+# Normalise line endings so checkouts match the repository regardless of the
+# host OS or core.autocrlf setting.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.exe binary
+*.dll binary
+*.node binary
