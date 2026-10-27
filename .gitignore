@@ -1,0 +1,19 @@
+node_modules/
+.nuxt/
+.output/
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# Build / test artefacts
+*.log
+e2e-*.json
+coverage/
+
+# Editable settings written at runtime
+.DS_Store
+Thumbs.db
+
+# Editor/IDE state
+.vscode/
+.idea/

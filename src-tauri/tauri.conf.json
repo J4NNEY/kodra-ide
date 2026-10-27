@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Kudo",
+  "version": "0.1.0",
+  "identifier": "dev.kudo.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:3000",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../.output/public"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Kudo",
+        "width": 1360,
+        "height": 820,
+        "minWidth": 900,
+        "minHeight": 560,
+        "center": true,
+        "resizable": true,
+        "decorations": false,
+        "transparent": false,
+        "backgroundColor": "#0a0a0a",
+        "dragDropEnabled": true,
+        "visible": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"],
+    "shortDescription": "Kudo — a fast, focused desktop IDE",
+    "longDescription": "Kudo is a clean-room desktop IDE clone built with Tauri v2 and Nuxt 3, featuring a code editor, terminal, git panel and an AI coding agent."
+  }
+}

@@ -1,0 +1,14 @@
+pub mod ai;
+pub mod browser;
+pub mod db;
+pub mod docker;
+pub mod exec;
+pub mod git;
+pub mod lsp;
+pub mod mcp;
+pub mod netlog;
+pub mod pty;
+pub mod settings;
+pub mod skills;
+pub mod updater;
+pub mod workspace;
