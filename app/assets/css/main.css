@@ -123,8 +123,10 @@ textarea {
    ============================================================ */
 .app-shell {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: var(--titlebar-h) 1fr var(--statusbar-h);
   height: 100vh;
+  overflow: hidden;
   background: var(--canvas);
 }
 

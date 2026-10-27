@@ -142,7 +142,6 @@ pub struct PtySession {
 
 pub struct DbSession {
     pub conn: rusqlite::Connection,
-    pub path: String,
 }
 
 pub struct McpSession {
@@ -161,8 +160,6 @@ pub struct LspSession {
     pub reader: tokio::io::BufReader<tokio::process::ChildStdout>,
     pub next_id: i64,
     pub timeout_secs: u64,
-    pub name: String,
-    pub root_uri: Option<String>,
     pub opened: HashMap<String, i64>,
 }
 

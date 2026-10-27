@@ -130,8 +130,6 @@ pub async fn lsp_start(
         reader: BufReader::new(stdout),
         next_id: 0,
         timeout_secs: 20,
-        name: req.name.clone(),
-        root_uri: req.root_uri.clone(),
         opened: HashMap::new(),
     };
 

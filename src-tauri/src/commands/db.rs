@@ -113,7 +113,7 @@ pub async fn db_connect(
     state
         .dbs
         .lock()
-        .insert(id.clone(), crate::state::DbSession { conn, path: path.clone() });
+        .insert(id.clone(), crate::state::DbSession { conn });
     Ok(DbHandle {
         id,
         path,
