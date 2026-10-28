@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use regex::{NoExpand, Regex};
 use serde::Serialize;
 use tauri::State;
 use walkdir::WalkDir;
@@ -376,10 +377,83 @@ pub struct SearchHit {
     pub is_dir: bool,
 }
 
+/// Build the matcher shared by search and replace. Literal queries are escaped,
+/// so a plain search for `a.b` does not behave like a regex.
+fn build_matcher(
+    query: &str,
+    case_sensitive: bool,
+    whole_word: bool,
+    is_regex: bool,
+) -> Result<Regex, String> {
+    if query.trim().is_empty() {
+        return Err("search query is empty".into());
+    }
+    let base = if is_regex {
+        query.to_string()
+    } else {
+        regex::escape(query)
+    };
+    let wrapped = if whole_word {
+        format!(r"\b(?:{base})\b")
+    } else {
+        base
+    };
+    let pattern = if case_sensitive {
+        wrapped
+    } else {
+        format!("(?i){wrapped}")
+    };
+    Regex::new(&pattern).map_err(|err| {
+        // The regex crate prints a multi-line diagnostic; the last line is the
+        // human-readable reason ("error: unclosed character class").
+        let raw = err.to_string();
+        let reason = raw
+            .lines()
+            .rev()
+            .map(str::trim)
+            .find(|line| !line.is_empty() && !line.starts_with('^'))
+            .unwrap_or("invalid pattern")
+            .trim_start_matches("error:")
+            .trim()
+            .to_string();
+        format!("invalid regular expression: {reason}")
+    })
+}
+
+fn line_of(text: &str, offset: usize) -> u32 {
+    text.as_bytes()[..offset.min(text.len())]
+        .iter()
+        .filter(|byte| **byte == b'\n')
+        .count() as u32
+        + 1
+}
+
+/// Replace a file atomically so a crash cannot leave it half written.
+fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    let mut name = path.file_name().map(|n| n.to_os_string()).unwrap_or_default();
+    name.push(".kudo-tmp");
+    let tmp = path.with_file_name(name);
+    let permissions = std::fs::metadata(path).ok().map(|m| m.permissions());
+    std::fs::write(&tmp, bytes).map_err(|e| e.to_string())?;
+    if let Some(permissions) = permissions {
+        // Keep the original file mode when the platform uses one.
+        let _ = std::fs::set_permissions(&tmp, permissions);
+    }
+    match std::fs::rename(&tmp, path) {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            let _ = std::fs::remove_file(&tmp);
+            std::fs::write(path, bytes).map_err(|e| e.to_string())
+        }
+    }
+}
+
 #[tauri::command]
 pub fn search_in_files(
     query: String,
     case_sensitive: Option<bool>,
+    whole_word: Option<bool>,
+    is_regex: Option<bool>,
     limit: Option<usize>,
     state: State<'_, AppState>,
 ) -> Result<Vec<SearchHit>, String> {
@@ -388,8 +462,12 @@ pub fn search_in_files(
         return Ok(Vec::new());
     }
     let limit = limit.unwrap_or(400);
-    let case_sensitive = case_sensitive.unwrap_or(false);
-    let needle = if case_sensitive { query.clone() } else { query.to_lowercase() };
+    let matcher = build_matcher(
+        &query,
+        case_sensitive.unwrap_or(false),
+        whole_word.unwrap_or(false),
+        is_regex.unwrap_or(false),
+    )?;
     let mut hits = Vec::new();
 
     'outer: for entry in WalkDir::new(&root)
@@ -416,27 +494,139 @@ pub fn search_in_files(
         }
         let text = String::from_utf8_lossy(&bytes);
         for (idx, line) in text.lines().enumerate() {
-            let hay = if case_sensitive { line.to_string() } else { line.to_lowercase() };
-            if let Some(col) = hay.find(&needle) {
-                hits.push(SearchHit {
-                    path: entry.path().to_string_lossy().to_string(),
-                    rel: entry
-                        .path()
-                        .strip_prefix(&root)
-                        .map(|p| p.to_string_lossy().replace('\\', "/"))
-                        .unwrap_or_default(),
-                    line: idx as u32 + 1,
-                    column: col as u32 + 1,
-                    text: line.trim_end().chars().take(240).collect(),
-                    is_dir: false,
-                });
-                if hits.len() >= limit {
-                    break 'outer;
-                }
+            let Some(found) = matcher.find(line) else { continue };
+            hits.push(SearchHit {
+                path: entry.path().to_string_lossy().to_string(),
+                rel: entry
+                    .path()
+                    .strip_prefix(&root)
+                    .map(|p| p.to_string_lossy().replace('\\', "/"))
+                    .unwrap_or_default(),
+                line: idx as u32 + 1,
+                column: line[..found.start()].chars().count() as u32 + 1,
+                text: line.trim_end().chars().take(240).collect(),
+                is_dir: false,
+            });
+            if hits.len() >= limit {
+                break 'outer;
             }
         }
     }
     Ok(hits)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplaceChange {
+    pub path: String,
+    pub rel: String,
+    pub matches: usize,
+    /// First line numbers with a match (capped to keep the preview compact).
+    pub lines: Vec<u32>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplaceOutcome {
+    pub matches: usize,
+    pub files: usize,
+    pub changes: Vec<ReplaceChange>,
+}
+
+/// Replacing more than this in one action is almost always a mistake.
+const MAX_REPLACE_MATCHES: usize = 20_000;
+const MAX_PREVIEW_LINES: usize = 40;
+
+/// Preview (`dry_run: true`) or apply a workspace-wide replacement.
+#[tauri::command]
+pub fn replace_in_files(
+    query: String,
+    replacement: String,
+    case_sensitive: Option<bool>,
+    whole_word: Option<bool>,
+    is_regex: Option<bool>,
+    dry_run: Option<bool>,
+    state: State<'_, AppState>,
+) -> Result<ReplaceOutcome, String> {
+    let root = state.workspace_root()?;
+    let is_regex = is_regex.unwrap_or(false);
+    let matcher = build_matcher(
+        &query,
+        case_sensitive.unwrap_or(false),
+        whole_word.unwrap_or(false),
+        is_regex,
+    )?;
+    let dry_run = dry_run.unwrap_or(true);
+    let mut total = 0usize;
+    let mut changes = Vec::new();
+
+    for entry in WalkDir::new(&root)
+        .max_depth(16)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy().to_lowercase();
+            e.depth() == 0 || !SKIP_DIRS.contains(&name.as_str())
+        })
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+    {
+        let meta = entry.metadata().ok();
+        if meta.map(|m| m.len() > 2_000_000).unwrap_or(false) {
+            continue;
+        }
+        let Ok(bytes) = std::fs::read(entry.path()) else {
+            continue;
+        };
+        if is_probably_binary(&bytes) {
+            continue;
+        }
+        // Only rewrite valid UTF-8; lossy conversion would corrupt the file.
+        let Ok(text) = String::from_utf8(bytes) else {
+            continue;
+        };
+        let matches = matcher.find_iter(&text).count();
+        if matches == 0 {
+            continue;
+        }
+        total += matches;
+        if total > MAX_REPLACE_MATCHES {
+            return Err(format!(
+                "too many matches (over {MAX_REPLACE_MATCHES}); narrow the search first"
+            ));
+        }
+        let lines = matcher
+            .find_iter(&text)
+            .take(MAX_PREVIEW_LINES)
+            .map(|found| line_of(&text, found.start()))
+            .collect();
+        if !dry_run {
+            let next = if is_regex {
+                matcher.replace_all(&text, replacement.as_str()).into_owned()
+            } else {
+                matcher
+                    .replace_all(&text, NoExpand(replacement.as_str()))
+                    .into_owned()
+            };
+            write_atomic(entry.path(), next.as_bytes())?;
+        }
+        changes.push(ReplaceChange {
+            path: entry.path().to_string_lossy().to_string(),
+            rel: entry
+                .path()
+                .strip_prefix(&root)
+                .map(|p| p.to_string_lossy().replace('\\', "/"))
+                .unwrap_or_default(),
+            matches,
+            lines,
+        });
+    }
+
+    Ok(ReplaceOutcome {
+        matches: total,
+        files: changes.len(),
+        changes,
+    })
 }
 
 #[derive(Serialize)]

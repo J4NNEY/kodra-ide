@@ -6,6 +6,8 @@ import type {
   GitStatus,
   QuickFile,
   SearchHit,
+  ReplaceChange,
+  ReplaceOutcome,
   Settings,
   WorkspaceInfo
 } from './types'
@@ -169,6 +171,19 @@ const rel = (p: string) => {
   return value.toLowerCase().startsWith(root.toLowerCase() + '\\')
     ? value.slice(root.length + 1)
     : value
+}
+
+/** Mirror the Rust matcher so the browser demo behaves the same way. */
+function mockPattern(query: string, caseSensitive: boolean, wholeWord: boolean, isRegex: boolean) {
+  if (!query.trim()) throw new Error('search query is empty')
+  const source = isRegex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const pattern = wholeWord ? `\\b(?:${source})\\b` : source
+  try {
+    return new RegExp(pattern, caseSensitive ? 'g' : 'gi')
+  } catch (err) {
+    const message = String(err).replace(/^SyntaxError:\s*/, '')
+    throw new Error(`invalid regular expression: ${message}`)
+  }
 }
 
 export const mockWorkspace: WorkspaceInfo = {
@@ -520,22 +535,52 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
       const q = String(args.query ?? '')
       const hits: SearchHit[] = []
       if (!q) return ok(hits)
+      const matcher = mockPattern(q, !!args.caseSensitive, !!args.wholeWord, !!args.isRegex)
       for (const [k, node] of files) {
         if (node.dir || !node.text) continue
         node.text.split('\n').forEach((line, i) => {
-          const col = line.toLowerCase().indexOf(q.toLowerCase())
-          if (col >= 0 && hits.length < 400) {
+          matcher.lastIndex = 0
+          const found = matcher.exec(line)
+          if (found && hits.length < 400) {
             hits.push({
               path: `${MOCK_ROOT}\\${k}`,
               rel: k,
               line: i + 1,
-              column: col + 1,
+              column: [...line.slice(0, found.index)].length + 1,
               text: line.trim().slice(0, 240)
             })
           }
         })
       }
       return ok(hits)
+    }
+    case 'replace_in_files': {
+      const q = String(args.query ?? '')
+      const matcher = mockPattern(q, !!args.caseSensitive, !!args.wholeWord, !!args.isRegex)
+      const replacement = String(args.replacement ?? '')
+      const changes: ReplaceChange[] = []
+      let total = 0
+      for (const [k, node] of files) {
+        if (node.dir || !node.text) continue
+        const matches = [...node.text.matchAll(matcher)]
+        if (!matches.length) continue
+        total += matches.length
+        if (total > 20_000) throw new Error('too many matches; narrow the search first')
+        const lines = [...new Set(matches.map((m) => node.text!.slice(0, m.index).split('\n').length))]
+        changes.push({
+          path: `${MOCK_ROOT}\\${k}`,
+          rel: k,
+          matches: matches.length,
+          lines: lines.slice(0, 40)
+        })
+        if (!args.dryRun) {
+          const next = args.isRegex
+            ? node.text.replace(matcher, replacement)
+            : node.text.replace(matcher, () => replacement)
+          files.set(k, { dir: false, text: next })
+        }
+      }
+      return ok<ReplaceOutcome>({ matches: total, files: changes.length, changes })
     }
     case 'workspace_stats':
       return ok({ files: files.size, dirs: 8, bytes: 240_000 })
@@ -579,7 +624,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'app_info':
       return ok({
         name: 'Kudo',
-        version: '0.2.0',
+        version: '0.3.0',
         platform: 'browser-mock',
         arch: 'wasm',
         configDir: 'localStorage'
@@ -776,12 +821,12 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
         throw new Error('Set an update feed URL in Settings → About first')
       }
       return ok({
-        currentVersion: '0.2.0',
-        latestVersion: '0.2.0',
+        currentVersion: '0.3.0',
+        latestVersion: '0.3.0',
         available: true,
-        notes: '## Kudo 0.2.0\n\n- Database manager\n- In-app browser\n- MCP tool servers\n',
+        notes: '## Kudo 0.3.0\n\n- Search and replace across the workspace\n- Whole-word and regular expression search\n',
         publishedAt: '2026-10-20T00:00:00Z',
-        url: 'https://example.com/kudo_0.2.0_x64-setup.exe',
+        url: 'https://example.com/kudo_0.3.0_x64-setup.exe',
         feed: String(args.feedUrl)
       })
     }

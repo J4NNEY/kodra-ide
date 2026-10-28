@@ -38,6 +38,20 @@ export interface SearchHit {
   text: string
 }
 
+export interface ReplaceChange {
+  path: string
+  rel: string
+  matches: number
+  /** First matching line numbers (capped by the backend for the preview). */
+  lines: number[]
+}
+
+export interface ReplaceOutcome {
+  matches: number
+  files: number
+  changes: ReplaceChange[]
+}
+
 export interface GitFile {
   path: string
   rel: string

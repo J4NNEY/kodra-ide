@@ -12,7 +12,7 @@ public screenshots and the UI is written from scratch.
 | --- | --- |
 | Editor | CodeMirror 6, syntax highlighting for 20+ languages, tabs, dirty state, quick open (`Ctrl+P`), go to line, find/replace in file |
 | Terminal | Real PTY (`portable-pty`), xterm.js, resizable panel, shells from settings (PowerShell by default on Windows) |
-| Workspace | Native folder picker, file tree with inline create/rename/delete, fuzzy search, project-wide grep |
+| Workspace | Native folder picker, file tree with inline create/rename/delete, fuzzy search, project-wide search with case/whole-word/regex toggles, previewed replace-all |
 | Source control | Git status, stage/unstage, commit, branch switch, history, diff preview, and worktrees (list, create on a new branch, open, remove, prune stale) |
 | Agent | Streaming chat with OpenAI-compatible and Anthropic providers, tool calling (`list_dir`, `read_file`, `write_file`, `search_files`, `grep`, `run_command`, `read_skill`), inline approval cards, cancellation |
 | Checkpoints | Every agent file write snapshots the previous contents first; chat replies show a Restore card with the touched files and the Agent pane lists recent changes |
@@ -89,6 +89,20 @@ src-tauri/
   Files that did not exist yet are recorded as absent. **Restore** in the chat card or the Agent
   pane replays the snapshot in reverse: files get their old contents back and files the agent
   created are deleted. The latest 40 checkpoints per workspace are kept, older ones are pruned.
+
+## Search and replace
+
+`Ctrl+Shift+F` opens project-wide search. Queries are literal by default; the toolbar toggles
+**match case**, **whole word** and **regular expression**. Regex queries use the Rust `regex`
+syntax and the literal mode escapes punctuation, so searching for `foo.bar` never matches `fooXbar`.
+
+The arrow in the search header reveals the replace field. **Replace all** first asks the backend for
+a dry run, shows how many matches and files would change, and only writes after you confirm. Files
+are rewritten atomically and only when they are valid UTF-8 and under 2 MB; binary files and build
+folders are skipped. Open editor tabs are reloaded from disk after the write, and the action is
+refused while an affected tab has unsaved edits so those changes can never be lost. One run is
+capped at 20,000 matches. In regex mode `$1` expands capture groups; literal mode treats the
+replacement as text.
 
 ## Worktrees
 

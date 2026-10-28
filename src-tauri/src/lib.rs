@@ -33,6 +33,7 @@ pub fn run() {
             commands::workspace::reveal_in_file_manager,
             commands::workspace::search_files,
             commands::workspace::search_in_files,
+            commands::workspace::replace_in_files,
             commands::workspace::workspace_stats,
             commands::workspace::export_text,
             // git

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0 — 2026-10-28
+
+Workspace-wide search and replace.
+
+- **Search options** — `search_in_files` gained whole-word and regular-expression flags on top of
+  match case. Literal queries are escaped, so `foo.bar` does not behave like a regex. Regex errors
+  are reported inline in the Search pane as you type (no toast per keystroke), and match columns are
+  counted in characters, not bytes.
+- **Replace all** — `replace_in_files` previews a workspace-wide replacement (`dryRun`) and reports
+  the match count, the changed files and the first matching lines. Confirming rewrites files
+  atomically, preserving their permissions and only touching valid UTF-8 text files.
+- **Open tabs** — clean editor tabs are reloaded from disk after a replace; tabs with unsaved edits
+  block the action with a message instead of being overwritten.
+- **Limits** — one replace action is capped at 20,000 matches, and the preview lists at most 40
+  line numbers per file. Binary files, files over 2 MB and build folders (`.git`, `node_modules`,
+  `target`, `dist`, …) are skipped.
+- **Browser mock** — the in-browser workspace mirrors the same matcher, preview and replacement
+  semantics for `pnpm dev`.
+
 ## 0.2.0 — 2026-10-28
 
 Extensions, themes, worktrees, checkpoints and language servers land in one release.

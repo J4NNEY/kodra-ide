@@ -196,6 +196,28 @@ export function useIde() {
     }
   }
 
+  /**
+   * Re-read a file from disk into its open tab. Used after a workspace-wide
+   * replace so the editor never shows stale text.
+   */
+  async function reloadTab(path: string) {
+    const tab = tabs.value.find((t) => t.path === path)
+    if (!tab) return false
+    try {
+      const file = await call<{ path: string; text: string; binary: boolean; size: number }>(
+        'read_file',
+        { path }
+      )
+      tab.content = file.text
+      tab.savedContent = file.text
+      tab.binary = file.binary
+      tab.dirty = false
+      return true
+    } catch {
+      return false
+    }
+  }
+
   async function closeTab(path: string) {
     const tab = tabs.value.find((t) => t.path === path)
     if (tab?.dirty) {
@@ -275,6 +297,7 @@ export function useIde() {
     openFile,
     updateContent,
     saveTab,
+    reloadTab,
     closeTab,
     toggleSidebar,
     toggleChat,

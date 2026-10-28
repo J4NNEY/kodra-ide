@@ -62,7 +62,7 @@ onMounted(async () => {
   try {
     info.value = await call('app_info')
   } catch {
-    info.value = { name: 'Kudo', version: '0.2.0', platform: 'browser' }
+    info.value = { name: 'Kudo', version: '0.3.0', platform: 'browser' }
   }
 })
 </script>
@@ -133,7 +133,7 @@ onMounted(async () => {
 
     <span class="status-item" :title="isTauri() ? info?.platform : 'browser mock'">
       <span class="dot-live" :style="isTauri() ? '' : 'background: var(--orange); box-shadow: none'" />
-      {{ info?.name ?? 'Kudo' }} {{ info?.version ?? '0.2.0' }}
+      {{ info?.name ?? 'Kudo' }} {{ info?.version ?? '0.3.0' }}
     </span>
   </footer>
 </template>
