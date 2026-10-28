@@ -39,19 +39,34 @@ fn text(manifest: &Value, key: &str) -> String {
         .to_string()
 }
 
+/// Hard limits so one folder cannot stall the UI or fill the config dir.
+const MAX_MANIFEST_BYTES: u64 = 512 * 1024;
+const MAX_EXTENSION_FILES: usize = 400;
+const MAX_EXTENSION_BYTES: u64 = 8 * 1024 * 1024;
+const MAX_CONTRIBUTIONS: usize = 64;
+
 fn contributions(manifest: &Value, key: &str) -> Vec<Value> {
     manifest
         .get(key)
         .and_then(Value::as_array)
-        .map(|items| items.iter().filter(|item| item.is_object()).cloned().collect())
+        .map(|items| {
+            items
+                .iter()
+                .filter(|item| item.is_object())
+                .take(MAX_CONTRIBUTIONS)
+                .cloned()
+                .collect()
+        })
         .unwrap_or_default()
 }
 
 fn read_manifest(path: &Path) -> Result<Value, String> {
-    let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-    if raw.len() > 512 * 1024 {
+    // Check the size before reading so a huge file is never loaded into memory.
+    let size = std::fs::metadata(path).map_err(|e| e.to_string())?.len();
+    if size > MAX_MANIFEST_BYTES {
         return Err("extension.json is too large".into());
     }
+    let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     let parsed: Value = serde_json::from_str(&raw).map_err(|e| format!("invalid JSON: {e}"))?;
     if !parsed.is_object() {
         return Err("extension.json must contain an object".into());
@@ -133,7 +148,13 @@ pub fn extensions_dir_path(state: State<'_, AppState>) -> Result<String, String>
     Ok(dir.to_string_lossy().to_string())
 }
 
-fn copy_dir(from: &Path, to: &Path) -> Result<(), String> {
+#[derive(Default)]
+struct CopyBudget {
+    files: usize,
+    bytes: u64,
+}
+
+fn copy_dir(from: &Path, to: &Path, budget: &mut CopyBudget) -> Result<(), String> {
     std::fs::create_dir_all(to).map_err(|e| e.to_string())?;
     let entries = std::fs::read_dir(from).map_err(|e| e.to_string())?;
     for entry in entries.flatten() {
@@ -144,8 +165,19 @@ fn copy_dir(from: &Path, to: &Path) -> Result<(), String> {
             continue;
         }
         if kind.is_dir() {
-            copy_dir(&source, &target)?;
+            copy_dir(&source, &target, budget)?;
         } else if kind.is_file() {
+            budget.files += 1;
+            if budget.files > MAX_EXTENSION_FILES {
+                return Err(format!(
+                    "extension folder has too many files (max {MAX_EXTENSION_FILES})"
+                ));
+            }
+            let size = entry.metadata().map(|meta| meta.len()).unwrap_or(0);
+            budget.bytes += size;
+            if budget.bytes > MAX_EXTENSION_BYTES {
+                return Err("extension folder is too large (max 8 MiB)".into());
+            }
             std::fs::copy(&source, &target).map_err(|e| e.to_string())?;
         }
     }
@@ -196,7 +228,12 @@ pub async fn extension_install(source: String, state: State<'_, AppState>) -> Re
     if target.exists() {
         return Err(format!("{folder} is already installed"));
     }
-    copy_dir(&from, &target)?;
+    let mut budget = CopyBudget::default();
+    if let Err(err) = copy_dir(&from, &target, &mut budget) {
+        // Never leave a half-copied extension behind after a failed install.
+        let _ = std::fs::remove_dir_all(&target);
+        return Err(err);
+    }
     Ok(target.to_string_lossy().to_string())
 }
 

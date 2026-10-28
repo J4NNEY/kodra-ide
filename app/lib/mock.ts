@@ -41,7 +41,7 @@ A clean-room desktop IDE inspired by Sokudo, built with **Tauri v2 + Nuxt 3**.
     dir: false,
     text: `{
   "name": "demo-app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build"
@@ -579,7 +579,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'app_info':
       return ok({
         name: 'Kudo',
-        version: '0.1.0',
+        version: '0.2.0',
         platform: 'browser-mock',
         arch: 'wasm',
         configDir: 'localStorage'
@@ -776,7 +776,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
         throw new Error('Set an update feed URL in Settings → About first')
       }
       return ok({
-        currentVersion: '0.1.0',
+        currentVersion: '0.2.0',
         latestVersion: '0.2.0',
         available: true,
         notes: '## Kudo 0.2.0\n\n- Database manager\n- In-app browser\n- MCP tool servers\n',

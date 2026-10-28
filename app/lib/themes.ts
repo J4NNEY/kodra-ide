@@ -367,7 +367,10 @@ export function normalizeTheme(raw: unknown, extension?: string): Theme | null {
   const source = raw as Record<string, unknown>
   const id = typeof source.id === 'string' ? source.id.trim() : ''
   if (!ID_RE.test(id) || id === 'system') return null
-  const name = typeof source.name === 'string' && source.name.trim() ? source.name.trim() : id
+  const name =
+    typeof source.name === 'string' && source.name.trim()
+      ? source.name.trim().slice(0, 60)
+      : id
   const kind: ThemeKind = source.kind === 'light' ? 'light' : 'dark'
   const base = baseThemeFor(kind)
 
@@ -489,6 +492,10 @@ export interface SnippetContribution {
   extension?: string
 }
 
+/** Snippet bodies pasted into an editor stay small enough to render safely. */
+const MAX_SNIPPET_PREFIX = 64
+const MAX_SNIPPET_BODY = 8000
+
 /** Validate a snippet from an extension manifest. */
 export function normalizeSnippet(raw: unknown, extension?: string): SnippetContribution | null {
   if (!raw || typeof raw !== 'object') return null
@@ -496,6 +503,7 @@ export function normalizeSnippet(raw: unknown, extension?: string): SnippetContr
   const prefix = typeof source.prefix === 'string' ? source.prefix.trim() : ''
   const body = typeof source.body === 'string' ? source.body : ''
   if (!prefix || !body) return null
+  if (prefix.length > MAX_SNIPPET_PREFIX || body.length > MAX_SNIPPET_BODY) return null
   const description =
     typeof source.description === 'string' ? source.description.trim().slice(0, 120) : ''
   const language = typeof source.language === 'string' ? source.language.trim() : ''

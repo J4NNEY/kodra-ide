@@ -138,6 +138,10 @@ Enabled themes appear in the Settings theme grid and can be selected like built-
 up in the command palette as `Snippet: <prefix>`; running one inserts the expanded body (tab stops
 resolved) into the active editor.
 
+Manifests are capped at 512 KiB, installs at 400 files / 8 MiB, and at most 64 themes and 64
+snippets are read per manifest. Symlinks are skipped, and a failed install removes its partial
+copy. See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 ## Development notes
 
 - In dev builds `window.__kudoCall(command, args)` exposes the IPC bridge so the real backend can be
@@ -146,6 +150,10 @@ resolved) into the active editor.
   connect to `http://127.0.0.1:9223`.
 - The updater's installer step is the only action that executes a downloaded binary; it always
   requires a manual click on **Install**.
+
+## Changelog
+
+Release notes live in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
