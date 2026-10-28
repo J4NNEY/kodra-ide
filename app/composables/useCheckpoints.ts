@@ -122,10 +122,7 @@ export function useCheckpoints() {
         tab.dirty = false
       } catch {
         // The file no longer exists (the agent created it): close the tab.
-        ide.tabs.value = ide.tabs.value.filter((t) => t.path !== file.path)
-        if (ide.activePath.value === file.path) {
-          ide.activePath.value = ide.tabs.value[0]?.path ?? null
-        }
+        ide.removeTabs([file.path])
       }
     }
   }

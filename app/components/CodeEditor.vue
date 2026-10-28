@@ -54,9 +54,14 @@ import { standardSQL } from '@codemirror/legacy-modes/mode/sql'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { dockerFile } from '@codemirror/legacy-modes/mode/dockerfile'
 import type { EditorTab } from '../lib/types'
+import type { EditorGroupId } from '../composables/useIde'
 import type { SyntaxKey, Theme } from '../lib/themes'
 
-const props = defineProps<{ tab: EditorTab; gotoLine?: number | null }>()
+const props = defineProps<{
+  tab: EditorTab
+  groupId?: EditorGroupId
+  gotoLine?: number | null
+}>()
 const emit = defineEmits<{
   (e: 'change', value: string): void
   (e: 'save'): void
@@ -112,7 +117,8 @@ const activeHighlight = () => syntaxHighlighting(highlightFor(themes.active.valu
 function onInsert(event: Event) {
   const text = (event as CustomEvent<string>).detail
   if (!view || typeof text !== 'string') return
-  if (ide.activePath.value !== props.tab.path) return
+  const focusedPane = !props.groupId || ide.activeGroupId.value === props.groupId
+  if (!focusedPane || ide.activePath.value !== props.tab.path) return
   const { from, to } = view.state.selection.main
   view.dispatch({
     changes: { from, to, insert: text },
@@ -349,6 +355,7 @@ onMounted(() => {
             scheduleSync()
           }
           if (update.docChanged || update.selectionSet) reportCursor(update.state)
+          if (update.focusChanged && update.view.hasFocus) reportCursor(update.state)
         }),
         languageFor(props.tab.language)
       ]
@@ -358,9 +365,9 @@ onMounted(() => {
   view.scrollDOM.scrollTop = props.tab.scrollTop ?? 0
   reportCursor(view.state)
   if (props.gotoLine) jumpTo(props.gotoLine)
-  view.focus()
+  if (!props.groupId || ide.activeGroupId.value === props.groupId) view.focus()
   if (!props.tab.binary) {
-    void lsp.openDocument(props.tab.path, props.tab.language, props.tab.content)
+    void lsp.acquireDocument(props.tab.path, props.tab.language, props.tab.content)
   }
 })
 
@@ -370,7 +377,7 @@ onBeforeUnmount(() => {
     clearTimeout(syncTimer)
     syncTimer = null
   }
-  void lsp.closeDocument(props.tab.path)
+  void lsp.releaseDocument(props.tab.path)
   if (view && props.tab) props.tab.scrollTop = view.scrollDOM.scrollTop
   view?.destroy()
   view = null

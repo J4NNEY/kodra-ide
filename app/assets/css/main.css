@@ -494,6 +494,111 @@ textarea {
   background: var(--canvas);
 }
 
+.editor-panes {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.editor-pane {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+  position: relative;
+}
+
+.pane-divider {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  position: relative;
+  background: var(--surface-0);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  touch-action: none;
+}
+.pane-divider::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 1px;
+  background: var(--border-strong);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.pane-divider:hover::after,
+.pane-divider:active::after {
+  opacity: 1;
+}
+
+.pane-tabbar {
+  overflow: hidden;
+}
+.tab-scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.tab-scroll::-webkit-scrollbar {
+  height: 0;
+}
+.tab.dragging {
+  opacity: 0.45;
+}
+.pane-btn {
+  flex: 0 0 auto;
+  width: 28px;
+  align-self: center;
+  height: 24px;
+  margin: 0 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-faint);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.pane-btn:hover {
+  background: var(--glass-strong);
+  color: var(--text);
+}
+.pane-btn.on {
+  color: var(--accent);
+}
+
+.pane-empty {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+.pane-empty p {
+  margin: 0;
+}
+.pane-empty-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .tabbar {
   height: 36px;
   flex: 0 0 auto;

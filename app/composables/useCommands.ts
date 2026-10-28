@@ -57,7 +57,7 @@ export function useCommands() {
       group: 'File',
       hint: 'Ctrl+W',
       run: () => {
-        if (ide.activePath.value) ide.closeTab(ide.activePath.value)
+        if (ide.activePath.value) ide.closeTab(ide.activePath.value, ide.activeGroupId.value)
       }
     },
     {
@@ -166,6 +166,26 @@ export function useCommands() {
       group: 'View',
       hint: 'Ctrl+`',
       run: () => ide.togglePanel('terminal')
+    },
+    {
+      id: 'view.split-editor',
+      label: 'View: Split Editor',
+      group: 'View',
+      hint: 'Ctrl+\\',
+      run: () => ide.splitEditor()
+    },
+    {
+      id: 'view.close-split',
+      label: 'View: Close Split',
+      group: 'View',
+      hint: 'Ctrl+\\',
+      run: () => ide.closeSplit()
+    },
+    {
+      id: 'view.move-editor',
+      label: 'View: Move Editor to Other Pane',
+      group: 'View',
+      run: () => ide.moveActiveToOtherPane()
     },
     {
       id: 'view.toggle-agent',

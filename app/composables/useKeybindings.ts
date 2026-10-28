@@ -74,7 +74,7 @@ export function useKeybindings() {
       }
       if (key === 'w') {
         event.preventDefault()
-        if (ide.activePath.value) ide.closeTab(ide.activePath.value)
+        if (ide.activePath.value) ide.closeTab(ide.activePath.value, ide.activeGroupId.value)
         return
       }
     }
@@ -134,10 +134,16 @@ export function useKeybindings() {
       return
     }
 
+    if (key === '\\' || code === 'Backslash') {
+      event.preventDefault()
+      ide.toggleSplit()
+      return
+    }
+
     if (key === 'w' && !shift) {
       if (isTyping(event.target) && !event.ctrlKey) return
       event.preventDefault()
-      if (ide.activePath.value) ide.closeTab(ide.activePath.value)
+      if (ide.activePath.value) ide.closeTab(ide.activePath.value, ide.activeGroupId.value)
       return
     }
 

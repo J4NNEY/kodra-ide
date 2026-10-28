@@ -24,11 +24,31 @@ export interface PaletteState {
   mode: 'none' | 'commands' | 'files'
 }
 
+export type EditorGroupId = 'main' | 'side'
+
+export interface EditorGroup {
+  id: EditorGroupId
+  paths: string[]
+  active: string | null
+}
+
+function freshGroups(): EditorGroup[] {
+  return [{ id: 'main', paths: [], active: null }]
+}
+
+interface StoredSession {
+  tabs?: string[]
+  active?: string | null
+  groups?: Array<{ id?: string; paths?: string[]; active?: string | null }>
+  activeGroup?: string
+}
+
 export function useIde() {
   const workspace = useState<WorkspaceInfo | null>('kudo:workspace', () => null)
   const settings = useState<Settings>('kudo:settings', () => structuredClone(defaultSettings))
   const tabs = useState<EditorTab[]>('kudo:tabs', () => [])
-  const activePath = useState<string | null>('kudo:active', () => null)
+  const groups = useState<EditorGroup[]>('kudo:editor-groups', () => freshGroups())
+  const activeGroupId = useState<EditorGroupId>('kudo:editor-active-group', () => 'main')
   const sidebarView = useState<SidebarView>('kudo:sidebar-view', () => 'explorer')
   const sidebarVisible = useState<boolean>('kudo:sidebar-visible', () => true)
   const chatOpen = useState<boolean>('kudo:chat-open', () => true)
@@ -40,7 +60,54 @@ export function useIde() {
   const ready = useState<boolean>('kudo:ready', () => false)
   const loadingFile = useState<boolean>('kudo:loading-file', () => false)
 
+  const splitOpen = computed(() => groups.value.length > 1)
+  const activeGroup = computed(
+    () => groups.value.find((g) => g.id === activeGroupId.value) ?? groups.value[0] ?? null
+  )
+  /** The focused pane's file. Writing switches the focused pane's active tab. */
+  const activePath = computed<string | null>({
+    get: () => activeGroup.value?.active ?? null,
+    set: (path) => {
+      const group = activeGroup.value
+      if (group) group.active = path
+    }
+  })
   const activeTab = computed(() => tabs.value.find((t) => t.path === activePath.value) ?? null)
+
+  function groupFor(id: EditorGroupId) {
+    return groups.value.find((g) => g.id === id) ?? null
+  }
+
+  function groupTabs(id: EditorGroupId): EditorTab[] {
+    const group = groupFor(id)
+    if (!group) return []
+    return group.paths
+      .map((path) => tabs.value.find((t) => t.path === path))
+      .filter((tab): tab is EditorTab => !!tab)
+  }
+
+  function focusGroup(id: EditorGroupId) {
+    if (groupFor(id)) activeGroupId.value = id
+  }
+
+  function resetGroups() {
+    groups.value = freshGroups()
+    activeGroupId.value = 'main'
+  }
+
+  /** Remove a path from one pane and fix up that pane's active tab. */
+  function detachFromGroup(group: EditorGroup, path: string) {
+    const index = group.paths.indexOf(path)
+    if (index < 0) return
+    group.paths.splice(index, 1)
+    if (group.active === path) group.active = group.paths[Math.max(0, index - 1)] ?? null
+  }
+
+  function attachToGroup(group: EditorGroup, path: string) {
+    if (!group.paths.includes(path)) group.paths.push(path)
+    group.active = path
+    activeGroupId.value = group.id
+  }
 
   let toastSeq = 0
   function notify(message: string, kind: Toast['kind'] = 'info') {
@@ -88,11 +155,17 @@ export function useIde() {
       try {
         const raw = localStorage.getItem('kudo:session')
         if (raw) {
-          const session = JSON.parse(raw) as { tabs: string[]; active: string | null }
-          for (const path of session.tabs ?? []) {
+          const session = JSON.parse(raw) as StoredSession
+          const wanted = [
+            ...new Set([
+              ...(session.tabs ?? []),
+              ...(session.groups ?? []).flatMap((group) => group.paths ?? [])
+            ])
+          ]
+          for (const path of wanted) {
             await openFile(path, undefined, true).catch(() => {})
           }
-          if (session.active) activePath.value = session.active
+          restoreGroups(session)
         }
       } catch {
         /* ignore */
@@ -101,11 +174,65 @@ export function useIde() {
     ready.value = true
   }
 
+  /** Rebuild panes from the stored session, dropping files that failed to load. */
+  function restoreGroups(session: StoredSession) {
+    const present = new Set(tabs.value.map((t) => t.path))
+    const stored = session.groups ?? []
+    if (!stored.length) {
+      const active =
+        session.active && present.has(session.active) ? session.active : tabs.value[0]?.path ?? null
+      groups.value = [{ id: 'main', paths: tabs.value.map((t) => t.path), active }]
+      activeGroupId.value = 'main'
+      persistSession()
+      return
+    }
+
+    const main = stored.find((group) => group.id === 'main')
+    const side = stored.find((group) => group.id === 'side')
+    const mainGroup: EditorGroup = {
+      id: 'main',
+      paths: (main?.paths ?? []).filter((path) => present.has(path)),
+      active: null
+    }
+    // Tabs that were open but not listed in a pane belong to the main pane.
+    const referenced = new Set([...(main?.paths ?? []), ...(side?.paths ?? [])])
+    for (const path of present) {
+      if (!referenced.has(path)) mainGroup.paths.push(path)
+    }
+    mainGroup.active =
+      main?.active && mainGroup.paths.includes(main.active)
+        ? main.active
+        : mainGroup.paths[0] ?? null
+
+    const next: EditorGroup[] = [mainGroup]
+    if (side) {
+      const sidePaths = (side.paths ?? []).filter((path) => present.has(path))
+      next.push({
+        id: 'side',
+        paths: sidePaths,
+        active:
+          side.active && sidePaths.includes(side.active) ? side.active : sidePaths[0] ?? null
+      })
+    }
+    groups.value = next
+    activeGroupId.value = session.activeGroup === 'side' && next.length > 1 ? 'side' : 'main'
+    persistSession()
+  }
+
   function persistSession() {
     if (typeof localStorage === 'undefined') return
     localStorage.setItem(
       'kudo:session',
-      JSON.stringify({ tabs: tabs.value.map((t) => t.path), active: activePath.value })
+      JSON.stringify({
+        tabs: tabs.value.map((t) => t.path),
+        active: activePath.value,
+        groups: groups.value.map((group) => ({
+          id: group.id,
+          paths: [...group.paths],
+          active: group.active
+        })),
+        activeGroup: activeGroupId.value
+      })
     )
   }
 
@@ -116,7 +243,8 @@ export function useIde() {
       const info = await call<WorkspaceInfo>('open_workspace', { path: target })
       workspace.value = info
       tabs.value = []
-      activePath.value = null
+      resetGroups()
+      persistSession()
       notify(`Opened ${info.name}`, 'success')
       const recent = await call<Settings>('get_settings')
       settings.value = { ...settings.value, ...recent }
@@ -129,7 +257,8 @@ export function useIde() {
     await call('close_workspace')
     workspace.value = null
     tabs.value = []
-    activePath.value = null
+    resetGroups()
+    persistSession()
     notify('Workspace closed')
   }
 
@@ -137,8 +266,14 @@ export function useIde() {
     if (!path) return
     const existing = tabs.value.find((t) => t.path === path)
     if (existing) {
-      activePath.value = path
+      // Reveal the file in whichever pane already owns it, otherwise the focused pane.
+      const target =
+        groups.value.find((group) => group.paths.includes(path)) ??
+        activeGroup.value ??
+        groups.value[0]
+      if (target) attachToGroup(target, path)
       if (line) pendingLine.value = { path, line }
+      persistSession()
       return
     }
     loadingFile.value = true
@@ -159,7 +294,8 @@ export function useIde() {
         dirty: false
       }
       tabs.value = [...tabs.value, tab]
-      activePath.value = path
+      const target = activeGroup.value ?? groups.value[0]
+      if (target) attachToGroup(target, path)
       if (line) pendingLine.value = { path, line }
       persistSession()
     } catch (err) {
@@ -218,18 +354,108 @@ export function useIde() {
     }
   }
 
-  async function closeTab(path: string) {
+  async function closeTab(path: string, groupId?: EditorGroupId) {
     const tab = tabs.value.find((t) => t.path === path)
     if (tab?.dirty) {
       const keep = window.confirm(`Discard unsaved changes in ${tab.name}?`)
       if (!keep) return
     }
-    const idx = tabs.value.findIndex((t) => t.path === path)
-    tabs.value = tabs.value.filter((t) => t.path !== path)
-    if (activePath.value === path) {
-      const next = tabs.value[Math.max(0, idx - 1)]
-      activePath.value = next?.path ?? null
+    if (groupId) {
+      const group = groupFor(groupId)
+      if (!group) return
+      detachFromGroup(group, path)
+      // A file mirrored in another pane stays open there.
+      if (!groups.value.some((item) => item.paths.includes(path))) {
+        tabs.value = tabs.value.filter((t) => t.path !== path)
+      }
+    } else {
+      tabs.value = tabs.value.filter((t) => t.path !== path)
+      for (const group of groups.value) detachFromGroup(group, path)
     }
+    if (!tabs.value.length) resetGroups()
+    persistSession()
+  }
+
+  /** Close several tabs at once (checkpoint restores recreate deleted files). */
+  function removeTabs(paths: string[]) {
+    if (!paths.length) return
+    const closing = new Set(paths)
+    tabs.value = tabs.value.filter((tab) => !closing.has(tab.path))
+    for (const group of groups.value) {
+      for (const path of paths) detachFromGroup(group, path)
+    }
+    if (!tabs.value.length) resetGroups()
+    persistSession()
+  }
+
+  /** Duplicate the focused file into a second pane and focus it. */
+  function splitEditor() {
+    if (splitOpen.value) return
+    const path = activePath.value
+    if (!path) return
+    groups.value = [
+      ...groups.value,
+      { id: 'side', paths: [path], active: path }
+    ]
+    activeGroupId.value = 'side'
+    persistSession()
+  }
+
+  /** Merge the side pane back into the main pane. */
+  function closeSplit() {
+    if (!splitOpen.value) return
+    const focusedSide = activeGroupId.value === 'side'
+    const main = groupFor('main')
+    const side = groupFor('side')
+    if (main && side) {
+      for (const path of side.paths) {
+        if (!main.paths.includes(path)) main.paths.push(path)
+      }
+      // Keep the file the user was working on if the side pane had focus.
+      if ((focusedSide && side.active) || !main.active) main.active = side.active ?? main.active
+    }
+    groups.value = groups.value.filter((group) => group.id === 'main')
+    if (!groups.value.length) groups.value = freshGroups()
+    activeGroupId.value = 'main'
+    persistSession()
+  }
+
+  function toggleSplit() {
+    if (splitOpen.value) closeSplit()
+    else splitEditor()
+  }
+
+  /** Move a tab between panes, keeping the flat tab pool unchanged. */
+  function moveTab(path: string, fromId: EditorGroupId, toId: EditorGroupId) {
+    if (fromId === toId) {
+      activateTab(toId, path)
+      return
+    }
+    const from = groupFor(fromId)
+    const to = groupFor(toId)
+    if (!from || !to) return
+    detachFromGroup(from, path)
+    attachToGroup(to, path)
+    persistSession()
+  }
+
+  /** Palette: move the focused editor to the opposite pane (or open the split). */
+  function moveActiveToOtherPane() {
+    const path = activePath.value
+    if (!path) return
+    if (!splitOpen.value) {
+      splitEditor()
+      return
+    }
+    const from = activeGroup.value
+    if (!from) return
+    moveTab(path, from.id, from.id === 'main' ? 'side' : 'main')
+  }
+
+  function activateTab(groupId: EditorGroupId, path: string) {
+    const group = groupFor(groupId)
+    if (!group || !tabs.value.some((tab) => tab.path === path)) return
+    attachToGroup(group, path)
     persistSession()
   }
 
@@ -278,6 +504,10 @@ export function useIde() {
     workspace,
     settings,
     tabs,
+    groups,
+    activeGroupId,
+    activeGroup,
+    splitOpen,
     activePath,
     activeTab,
     sidebarView,
@@ -299,6 +529,15 @@ export function useIde() {
     saveTab,
     reloadTab,
     closeTab,
+    removeTabs,
+    splitEditor,
+    closeSplit,
+    toggleSplit,
+    moveTab,
+    moveActiveToOtherPane,
+    activateTab,
+    focusGroup,
+    groupTabs,
     toggleSidebar,
     toggleChat,
     togglePanel,

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.0 — 2026-10-28
+
+Editors can now be split into two panes.
+
+- **Independent panes** — `Ctrl+\` opens a second editor pane with its own tab strip, active file
+  and scroll position. Each pane shows the conventional breadcrumbs and dirty indicators.
+- **Drag tabs between panes** — dropping a tab on the other pane moves it instead of creating a
+  duplicate. Opening a file that is already open focuses the pane that owns it; the focused pane
+  receives new files, so every action (explorer, quick open, go-to-definition) lands where the user
+  is working.
+- **Resizable divider** — drag the vertical divider to adjust the split; the ratio persists in
+  `localStorage`. `Ctrl+\` or the pane toolbar button closes the split and merges the side tabs back
+  into the main pane.
+- **Commands** — `View: Split Editor`, `View: Close Split` and `View: Move Editor to Other Pane` are
+  available from the palette.
+- **Session restore** — pane membership and each pane's active tab are stored with the rest of the
+  session and restored on launch.
+- **LSP** — document references are counted per editor view, so closing one of two panes showing the
+  same file no longer sends `didClose` while the other view still needs diagnostics.
+
 ## 0.4.0 — 2026-10-28
 
 Terminal sessions are now independent, tabbed PTYs.

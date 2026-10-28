@@ -10,7 +10,7 @@ public screenshots and the UI is written from scratch.
 
 | Area | What works |
 | --- | --- |
-| Editor | CodeMirror 6, syntax highlighting for 20+ languages, tabs, dirty state, quick open (`Ctrl+P`), go to line, find/replace in file |
+| Editor | CodeMirror 6, syntax highlighting for 20+ languages, tabs, split panes with independent tabs, dirty state, quick open (`Ctrl+P`), go to line, find/replace in file |
 | Terminal | Real PTY (`portable-pty`), xterm.js, multiple tabbed sessions, shell picker with detected shells, resizable panel, PowerShell by default on Windows |
 | Workspace | Native folder picker, file tree with inline create/rename/delete, fuzzy search, project-wide search with case/whole-word/regex toggles, previewed replace-all |
 | Source control | Git status, stage/unstage, commit, branch switch, history, diff preview, and worktrees (list, create on a new branch, open, remove, prune stale) |
@@ -103,6 +103,18 @@ folders are skipped. Open editor tabs are reloaded from disk after the write, an
 refused while an affected tab has unsaved edits so those changes can never be lost. One run is
 capped at 20,000 matches. In regex mode `$1` expands capture groups; literal mode treats the
 replacement as text.
+
+## Split editor
+
+`Ctrl+\` splits the editor into two side-by-side panes. The focused file is duplicated into the new
+pane; after that each pane keeps its own tab strip, active file and scroll position. Opening a file
+that is already visible focuses the pane that owns it, and dragging a tab onto the other pane moves
+it there instead of opening a second copy. Drag the divider to change the split ratio; it is
+remembered across restarts.
+
+`Ctrl+\` again (or the pane toolbar button) merges the side pane back into the main pane without
+losing its tabs. The palette adds **View: Split Editor**, **View: Close Split** and **View: Move
+Editor to Other Pane**. Layout and both tab strips are restored with the session.
 
 ## Terminals
 

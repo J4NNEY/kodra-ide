@@ -120,6 +120,8 @@ const KIND: Record<number, string> = {
 const starting = new Map<string, Promise<string | null>>()
 const openedDocs = new Map<string, number>()
 const docVersion = new Map<string, number>()
+/** Number of editor views currently holding a document open. */
+const docRefs = new Map<string, number>()
 
 function pathToUri(path: string): string {
   const normalised = path.replace(/\\/g, '/')
@@ -233,6 +235,7 @@ export function useLsp() {
     diagnostics.value = {}
     openedDocs.clear()
     docVersion.clear()
+    docRefs.clear()
     starting.clear()
   }
 
@@ -411,6 +414,23 @@ export function useLsp() {
     }
   }
 
+  /** Track one editor view holding `path` open (two panes can show the same file). */
+  async function acquireDocument(path: string, language: string, text: string): Promise<void> {
+    docRefs.set(path, (docRefs.get(path) ?? 0) + 1)
+    await openDocument(path, language, text)
+  }
+
+  /** Release a view; the server only receives didClose when the last one goes. */
+  async function releaseDocument(path: string): Promise<void> {
+    const refs = (docRefs.get(path) ?? 1) - 1
+    if (refs > 0) {
+      docRefs.set(path, refs)
+      return
+    }
+    docRefs.delete(path)
+    await closeDocument(path)
+  }
+
   async function request<T>(path: string, method: string, line: number, column: number, text?: string) {
     const languageId = languageFor(path)
     const id = await ensureServer(languageId)
@@ -538,6 +558,8 @@ export function useLsp() {
     openDocument,
     changeDocument,
     closeDocument,
+    acquireDocument,
+    releaseDocument,
     complete,
     completionSource,
     hover,
