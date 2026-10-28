@@ -5,6 +5,7 @@ const ide = useIde()
 const git = useGit()
 const chat = useChat()
 const lsp = useLsp()
+const extensions = useExtensions()
 
 // Overlays and heavy panes are split out of the entry bundle.
 const CommandPalette = defineAsyncComponent(() => import('./components/CommandPalette.vue'))
@@ -42,6 +43,7 @@ function dragWidth(event: PointerEvent, kind: 'sidebar' | 'chat') {
 onMounted(async () => {
   ide.applyTheme()
   await ide.init()
+  await extensions.ensureLoaded()
   chat.load()
   void lsp.detect()
   void lsp.listen()

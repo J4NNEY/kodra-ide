@@ -75,6 +75,20 @@ export interface Worktree {
   current: boolean
 }
 
+export interface ExtensionInfo {
+  folder: string
+  id: string
+  name: string
+  version: string
+  description: string
+  author: string
+  path: string
+  enabled: boolean
+  themes: Record<string, unknown>[]
+  snippets: Record<string, unknown>[]
+  error: string | null
+}
+
 export interface Commit {
   hash: string
   short: string
@@ -153,7 +167,16 @@ export interface EditorTab {
   dirty?: boolean
 }
 
-export type SidebarView = 'explorer' | 'search' | 'git' | 'agent' | 'database' | 'skills' | 'docker' | 'mcp'
+export type SidebarView =
+  | 'explorer'
+  | 'search'
+  | 'git'
+  | 'agent'
+  | 'database'
+  | 'skills'
+  | 'docker'
+  | 'mcp'
+  | 'extensions'
 
 export interface CommandOutput {
   stdout: string

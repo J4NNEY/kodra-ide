@@ -24,7 +24,9 @@ public screenshots and the UI is written from scratch.
 | Docker | Containers/images tabs, start/stop/restart, logs, run image |
 | Network | Live request log (AI calls, browser fetches, update checks) in the bottom panel |
 | Updater | Feed check, download to temp, launch installer, reveal in Explorer (see `docs/updater.md`) |
-| Shell | Dark/light themes, accent colours, font size, tab size, word wrap, session restore, command palette, keybindings |
+| Extensions | Declarative extension folders (`extension.json`) contribute colour themes and snippets; install from a folder, enable/disable, remove |
+| Themes | Six built-in palettes (Kudo Dark/Light, Midnight, Graphite, Sand, Violet) plus extension themes; a theme restyles the shell, the editor syntax palette and the terminal |
+| Shell | Theme picker with live preview, accent colours, font size, tab size, word wrap, session restore, command palette, keybindings |
 
 ## Stack
 
@@ -71,7 +73,8 @@ src-tauri/
 ## Backend command groups
 
 `workspace` · `pty` · `exec` · `git` · `ai` · `checkpoint` · `settings` · `db` · `browser` · `mcp` · `lsp` ·
-`docker` · `skills` · `updater` · `netlog`. All commands are registered in `src-tauri/src/lib.rs`.
+`docker` · `skills` · `extensions` · `updater` · `netlog`. All commands are registered in
+`src-tauri/src/lib.rs`.
 
 ## Agent safety model
 
@@ -94,6 +97,46 @@ a branch and a folder outside the workspace: existing branches are checked out, 
 the current HEAD. **Open** switches the workspace to that folder, **Remove** deletes the worktree
 (keeping the branch; folders with uncommitted changes need a forced removal), and **Prune stale**
 cleans up entries whose folder was deleted outside Kudo.
+
+## Extensions and themes
+
+Extensions are folders with an `extension.json` manifest. They are **declarative**: a manifest can
+contribute colour themes and snippets, but never code, and nothing in it is executed. Install one
+from the Extensions pane (**Install from folder**) or by copying the folder into
+`<app config>/extensions/<name>/`. The enable switch is stored as `enabled` inside the manifest, and
+**Remove** deletes the copied folder.
+
+```json
+{
+  "id": "ember",
+  "name": "Ember Studio",
+  "version": "1.0.0",
+  "themes": [
+    {
+      "id": "ember-dark",
+      "name": "Ember Dark",
+      "kind": "dark",
+      "colors": { "surface0": "#120b08", "accent": "#ff8a3d" },
+      "syntax": { "keyword": { "color": "#ff8a3d" }, "string": { "color": "#ffd28a" } },
+      "terminal": { "background": "#1a0f0a" }
+    }
+  ],
+  "snippets": [
+    { "prefix": "log", "body": "console.log(${1:value})", "description": "Log a value" }
+  ]
+}
+```
+
+Themes are plain data (`app/lib/themes.ts`): a UI colour palette (`surface0`…`surface4`, `canvas`,
+text tones, accent, status colours), a syntax palette for the editor and optional terminal
+overrides. Anything omitted inherits from the built-in theme of the same `kind`, so a manifest only
+needs to spell out what it changes. Picking a theme in **Settings → Appearance** previews it live,
+and the choose action also adopts the theme's accent colour (the accent picker can still override
+it).
+
+Enabled themes appear in the Settings theme grid and can be selected like built-ins. Snippets show
+up in the command palette as `Snippet: <prefix>`; running one inserts the expanded body (tab stops
+resolved) into the active editor.
 
 ## Development notes
 

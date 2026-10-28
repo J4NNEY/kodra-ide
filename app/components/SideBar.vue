@@ -7,6 +7,7 @@ const DatabasePane = defineAsyncComponent(() => import('./DatabasePane.vue'))
 const SkillsPane = defineAsyncComponent(() => import('./SkillsPane.vue'))
 const DockerPane = defineAsyncComponent(() => import('./DockerPane.vue'))
 const McpPane = defineAsyncComponent(() => import('./McpPane.vue'))
+const ExtensionsPane = defineAsyncComponent(() => import('./ExtensionsPane.vue'))
 </script>
 
 <template>
@@ -19,5 +20,6 @@ const McpPane = defineAsyncComponent(() => import('./McpPane.vue'))
     <SkillsPane v-else-if="ide.sidebarView.value === 'skills'" />
     <DockerPane v-else-if="ide.sidebarView.value === 'docker'" />
     <McpPane v-else-if="ide.sidebarView.value === 'mcp'" />
+    <ExtensionsPane v-else-if="ide.sidebarView.value === 'extensions'" />
   </aside>
 </template>

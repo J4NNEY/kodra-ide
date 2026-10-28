@@ -117,6 +117,12 @@ pub fn run() {
             commands::skills::skill_read,
             commands::skills::skill_save,
             commands::skills::skill_scaffold,
+            // extensions
+            commands::extensions::extensions_list,
+            commands::extensions::extensions_dir_path,
+            commands::extensions::extension_install,
+            commands::extensions::extension_set_enabled,
+            commands::extensions::extension_remove,
             // updater
             commands::updater::update_check,
             commands::updater::update_download,

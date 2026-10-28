@@ -17,10 +17,13 @@ import {
   X
 } from 'lucide-vue-next'
 import type { Settings, UpdateCheck } from '../lib/types'
+import type { Theme } from '../lib/themes'
 import { call } from '../lib/api'
 
 const ide = useIde()
 const lsp = useLsp()
+const themes = useThemes()
+const extensions = useExtensions()
 const settingsTab = useState<string>('kudo:settings-tab', () => 'appearance')
 
 interface AppInfo {
@@ -80,6 +83,26 @@ function close() {
 
 function chooseAccent(color: string) {
   draft.value.accent = color
+}
+
+function chooseTheme(id: string) {
+  draft.value.theme = id
+  if (id !== 'system') draft.value.accent = themes.byId(id).colors.accent.toLowerCase()
+}
+
+const themeOptions = computed(() => themes.all.value)
+
+/** Four representative syntax colours for the theme thumbnail. */
+function syntaxPreview(theme: Theme): string[] {
+  const keys = ['keyword', 'string', 'function', 'number'] as const
+  return keys.map((key) => theme.syntax[key]?.color ?? theme.colors.text)
+}
+
+function openExtensions() {
+  ide.settingsOpen.value = false
+  ide.sidebarView.value = 'extensions'
+  ide.sidebarVisible.value = true
+  void extensions.load()
 }
 
 async function save() {
@@ -206,16 +229,7 @@ watch(
   () => [draft.value.theme, draft.value.accent, draft.value.fontSize, draft.value.fontFamily],
   () => {
     if (!ide.settingsOpen.value || typeof document === 'undefined') return
-    const theme = draft.value.theme
-    const resolved =
-      theme === 'system'
-        ? window.matchMedia('(prefers-color-scheme: light)').matches
-          ? 'light'
-          : 'dark'
-        : theme
-    document.documentElement.dataset.theme = resolved
-    document.documentElement.style.setProperty('--accent', draft.value.accent)
-    document.documentElement.style.setProperty('--accent-soft', `${draft.value.accent}22`)
+    themes.preview(draft.value.theme, draft.value.accent)
     document.documentElement.style.setProperty('--fs-mono', `${draft.value.fontSize}px`)
     document.documentElement.style.setProperty('--font-mono', draft.value.fontFamily)
   }
@@ -251,15 +265,53 @@ watch(
               <div class="pane-title">Appearance</div>
 
               <div class="field">
-                <label>Theme</label>
-                <div class="segment">
+                <div class="field-head">
+                  <label>Theme</label>
+                  <button class="link-btn" @click="openExtensions">
+                    <Blocks :size="12" /> Manage extensions
+                  </button>
+                </div>
+                <div class="theme-grid">
                   <button
-                    v-for="option in ['dark', 'light', 'system']"
-                    :key="option"
-                    :class="{ active: draft.theme === option }"
-                    @click="draft.theme = option"
+                    class="theme-card"
+                    :class="{ active: draft.theme === 'system' }"
+                    @click="chooseTheme('system')"
                   >
-                    <Monitor :size="13" /> {{ option }}
+                    <span class="theme-preview system">
+                      <span class="theme-preview-bar" />
+                      <Monitor :size="14" />
+                    </span>
+                    <span class="theme-card-label">System</span>
+                    <span class="theme-card-meta">Follows Windows</span>
+                    <Check v-if="draft.theme === 'system'" class="theme-check" :size="13" />
+                  </button>
+
+                  <button
+                    v-for="theme in themeOptions"
+                    :key="theme.id"
+                    class="theme-card"
+                    :class="{ active: draft.theme === theme.id }"
+                    @click="chooseTheme(theme.id)"
+                  >
+                    <span
+                      class="theme-preview"
+                      :style="{ background: theme.colors.surface1, borderColor: theme.colors.borderStrong }"
+                    >
+                      <span class="theme-preview-bar" :style="{ background: theme.colors.surface3 }" />
+                      <span class="theme-syntax">
+                        <i
+                          v-for="(style, index) in syntaxPreview(theme)"
+                          :key="index"
+                          :style="{ background: style }"
+                        />
+                      </span>
+                      <span class="theme-accent" :style="{ background: theme.colors.accent }" />
+                    </span>
+                    <span class="theme-card-label">{{ theme.name }}</span>
+                    <span class="theme-card-meta">
+                      {{ theme.extension ? 'Extension' : theme.kind === 'light' ? 'Light' : 'Dark' }}
+                    </span>
+                    <Check v-if="draft.theme === theme.id" class="theme-check" :size="13" />
                   </button>
                 </div>
                 <span class="hint">Changes preview live; press Save to persist.</span>
@@ -1004,5 +1056,121 @@ watch(
   font-size: 10.5px;
   color: var(--text-faint);
   opacity: 0.85;
+}
+.field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.field-head > label {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.link-btn:hover {
+  color: var(--accent);
+}
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+.theme-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.theme-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.theme-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+.theme-preview {
+  position: relative;
+  display: block;
+  height: 46px;
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.theme-preview.system {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f0f0f 0%, #141414 49%, #f3f4f6 50%, #ffffff 100%);
+  color: var(--text-muted);
+}
+.theme-preview-bar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 10px;
+  background: var(--surface-3);
+}
+.theme-syntax {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  top: 18px;
+  display: flex;
+  gap: 4px;
+}
+.theme-syntax i {
+  height: 3px;
+  border-radius: 2px;
+  flex: 1;
+}
+.theme-accent {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--surface-1);
+}
+.theme-card-label {
+  font-size: 11.5px;
+  font-weight: 550;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.theme-card-meta {
+  font-size: 9.5px;
+  color: var(--text-faint);
+}
+.theme-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--surface-1);
 }
 </style>

@@ -116,6 +116,17 @@ export async function pickFolder(): Promise<string | null> {
   return typeof picked === 'string' ? picked : null
 }
 
+export async function pickExtensionFolder(): Promise<string | null> {
+  if (!isTauri()) return 'C:\\demo\\kudo-extensions\\ember'
+  const { open } = await import('@tauri-apps/plugin-dialog')
+  const picked = await open({
+    directory: true,
+    multiple: false,
+    title: 'Select extension folder'
+  })
+  return typeof picked === 'string' ? picked : null
+}
+
 /** Pick an existing SQLite database file. */
 export async function pickDatabaseFile(): Promise<string | null> {
   if (!isTauri()) return 'C:\\demo\\kudo-workspace\\demo.sqlite'

@@ -9,7 +9,8 @@ import {
   Sparkles,
   Container,
   Globe,
-  Blocks
+  Blocks,
+  Puzzle
 } from 'lucide-vue-next'
 import type { SidebarView } from '../lib/types'
 
@@ -28,6 +29,7 @@ const tools: { id: SidebarView; icon: any; label: string }[] = [
   { id: 'database', icon: Database, label: 'Database' },
   { id: 'skills', icon: Sparkles, label: 'Skills' },
   { id: 'mcp', icon: Blocks, label: 'MCP servers' },
+  { id: 'extensions', icon: Puzzle, label: 'Extensions' },
   { id: 'docker', icon: Container, label: 'Docker' }
 ]
 

@@ -6,14 +6,15 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Eraser, Plus, SquareTerminal, Trash2, X } from 'lucide-vue-next'
 import { call, isTauri, listen } from '../lib/api'
+import { isColor } from '../lib/themes'
 import { useTerminalEpoch } from '../composables/useCommands'
 import ProblemsPanel from './ProblemsPanel.vue'
 
 const ide = useIde()
 const lsp = useLsp()
+const themes = useThemes()
 const { lines: outputLines, push: pushOutput, clear: clearOutput } = useOutputLog()
 const epoch = useTerminalEpoch()
-const effectiveTheme = useEffectiveTheme()
 
 const host = ref<HTMLDivElement | null>(null)
 const status = ref<'idle' | 'running' | 'exited'>('idle')
@@ -27,55 +28,34 @@ let mockBuffer = ''
 let bootedPath: string | null = null
 
 function xtermTheme() {
-  const accent = ide.settings.value.accent
-
-  if (effectiveTheme.value === 'light') {
-    return {
-      background: 'rgba(0,0,0,0)',
-      foreground: '#24292f',
-      cursor: accent,
-      cursorAccent: '#ffffff',
-      selectionBackground: `${accent}33`,
-      black: '#24292f',
-      red: '#b31d28',
-      green: '#2f8a4c',
-      yellow: '#9a6700',
-      blue: '#0b5cad',
-      magenta: '#8250df',
-      cyan: '#1b7c83',
-      white: '#f6f8fa',
-      brightBlack: '#57606a',
-      brightRed: '#d1242f',
-      brightGreen: '#1a7f37',
-      brightYellow: '#bf8700',
-      brightBlue: '#0969da',
-      brightMagenta: '#a475f9',
-      brightCyan: '#3192aa',
-      brightWhite: '#ffffff'
-    }
-  }
+  const theme = themes.active.value
+  const accent = isColor(ide.settings.value.accent)
+    ? ide.settings.value.accent
+    : theme.colors.accent
+  const light = theme.kind === 'light'
+  const transparent = 'rgba(0,0,0,0)'
 
   return {
-    background: 'rgba(0,0,0,0)',
-    foreground: '#e6e6e9',
-    cursor: accent,
-    cursorAccent: '#0a0a0a',
-    selectionBackground: `${accent}44`,
-    black: '#1a1a1c',
-    red: '#e4676b',
-    green: '#73c991',
+    background: theme.terminal?.background ?? transparent,
+    foreground: theme.terminal?.foreground ?? theme.colors.text,
+    cursor: theme.terminal?.cursor ?? accent,
+    cursorAccent: theme.colors.surface1,
+    selectionBackground: theme.terminal?.selection ?? `${accent}33`,
+    black: light ? '#24292f' : '#1a1a1c',
+    red: theme.colors.red,
+    green: theme.colors.green,
     yellow: accent,
-    blue: '#6cb6ff',
-    magenta: '#c792ea',
-    cyan: '#89ddff',
-    white: '#e6e6e9',
-    brightBlack: '#52525b',
-    brightRed: '#ff8b8e',
-    brightGreen: '#8fd6a5',
-    brightYellow: '#ffc857',
-    brightBlue: '#8ec7ff',
-    brightMagenta: '#d9b3f5',
-    brightCyan: '#a8e9ff',
+    blue: theme.colors.blue,
+    magenta: theme.colors.purple,
+    cyan: light ? '#1b7c83' : '#89ddff',
+    white: theme.colors.text,
+    brightBlack: theme.colors.textFaint,
+    brightRed: theme.colors.red,
+    brightGreen: theme.colors.green,
+    brightYellow: theme.colors.accentStrong,
+    brightBlue: theme.colors.blue,
+    brightMagenta: theme.colors.purple,
+    brightCyan: light ? '#3192aa' : '#a8e9ff',
     brightWhite: '#ffffff'
   }
 }
@@ -344,7 +324,7 @@ watch(
   }
 )
 
-watch([effectiveTheme, () => ide.settings.value.accent], () => {
+watch([() => themes.active.value.id, () => ide.settings.value.accent], () => {
   if (term) term.options.theme = xtermTheme()
 })
 

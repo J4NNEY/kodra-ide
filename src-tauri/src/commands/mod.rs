@@ -4,6 +4,7 @@ pub mod checkpoint;
 pub mod db;
 pub mod docker;
 pub mod exec;
+pub mod extensions;
 pub mod git;
 pub mod lsp;
 pub mod mcp;

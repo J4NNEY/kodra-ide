@@ -20,8 +20,23 @@ export function useCommands() {
   const epoch = useTerminalEpoch()
   const browser = useBrowser()
   const database = useDatabase()
+  const extensions = useExtensions()
+  const themes = useThemes()
 
-  const commands = computed<Command[]>(() => [
+  /** Snippet commands are rebuilt on every access so late-loaded extensions appear. */
+  const snippetCommands = (): Command[] =>
+    extensions.snippets.value.map((snippet, index) => ({
+      id: `snippet.${snippet.extensionFolder}.${index}`,
+      label: `Snippet: ${snippet.prefix}${snippet.description ? ` — ${snippet.description}` : ''}`,
+      group: snippet.extension ?? 'Snippets',
+      hint: 'insert',
+      run: () => {
+        extensions.applySnippet(snippet)
+      }
+    }))
+
+  const commands = computed<Command[]>(() => {
+    const items: Command[] = [
     {
       id: 'file.open-folder',
       label: 'Open Folder…',
@@ -41,7 +56,9 @@ export function useCommands() {
       label: 'Close Editor',
       group: 'File',
       hint: 'Ctrl+W',
-      run: () => ide.activePath.value && ide.closeTab(ide.activePath.value)
+      run: () => {
+        if (ide.activePath.value) ide.closeTab(ide.activePath.value)
+      }
     },
     {
       id: 'file.close-workspace',
@@ -100,6 +117,12 @@ export function useCommands() {
       label: 'View: MCP Servers',
       group: 'View',
       run: () => (ide.sidebarView.value = 'mcp', (ide.sidebarVisible.value = true))
+    },
+    {
+      id: 'view.extensions',
+      label: 'View: Extensions',
+      group: 'View',
+      run: () => (ide.sidebarView.value = 'extensions', (ide.sidebarVisible.value = true))
     },
     {
       id: 'browser.open',
@@ -164,7 +187,10 @@ export function useCommands() {
       group: 'Preferences',
       run: () => {
         const next = cloneSettings(ide.settings.value)
-        next.theme = next.theme === 'light' ? 'dark' : 'light'
+        const light = themes.active.value.kind === 'light'
+        const target = themes.byId(light ? 'kudo-dark' : 'kudo-light')
+        next.theme = target.id
+        next.accent = target.colors.accent
         ide.saveSettings(next)
       }
     },
@@ -237,7 +263,10 @@ export function useCommands() {
         ide.settingsOpen.value = true
       }
     }
-  ])
+  ]
+    items.push(...snippetCommands())
+    return items
+  })
 
   function filter(query: string): Command[] {
     const q = query.trim().toLowerCase()

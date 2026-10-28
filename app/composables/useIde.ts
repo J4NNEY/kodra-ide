@@ -5,6 +5,14 @@ import type {
   WorkspaceInfo
 } from '../lib/types'
 import { basename, call, languageFor, pickFolder } from '../lib/api'
+import { defaultSettings } from '../lib/defaults'
+import {
+  EXTENSION_THEMES_KEY,
+  applyThemeVars,
+  builtinThemes,
+  resolveTheme,
+  type Theme
+} from '../lib/themes'
 
 export interface Toast {
   id: number
@@ -16,37 +24,9 @@ export interface PaletteState {
   mode: 'none' | 'commands' | 'files'
 }
 
-const defaults: Settings = {
-  theme: 'dark',
-  accent: '#d4a73c',
-  fontFamily: 'JetBrains Mono, Cascadia Code, Consolas, monospace',
-  fontSize: 13,
-  tabSize: 2,
-  wordWrap: false,
-  minimap: true,
-  terminalShell: 'powershell.exe',
-  terminalFontSize: 12,
-  restoreSession: true,
-  ai: {
-    provider: 'demo',
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
-    apiKey: '',
-    temperature: 0.3,
-    maxTokens: 4096,
-    systemPrompt:
-      "You are Kudo's coding agent. Use the provided tools to inspect and edit files in the open workspace.",
-    agentMode: true,
-    autoApprove: false
-  },
-  recentWorkspaces: [],
-  mcpServers: [],
-  updateFeed: '',
-  browserHome: 'http://localhost:3000'
-}
 export function useIde() {
   const workspace = useState<WorkspaceInfo | null>('kudo:workspace', () => null)
-  const settings = useState<Settings>('kudo:settings', () => structuredClone(defaults))
+  const settings = useState<Settings>('kudo:settings', () => structuredClone(defaultSettings))
   const tabs = useState<EditorTab[]>('kudo:tabs', () => [])
   const activePath = useState<string | null>('kudo:active', () => null)
   const sidebarView = useState<SidebarView>('kudo:sidebar-view', () => 'explorer')
@@ -73,27 +53,25 @@ export function useIde() {
 
   function applyTheme(theme = settings.value.theme) {
     if (typeof document === 'undefined') return
-    const resolved =
-      theme === 'system'
-        ? window.matchMedia('(prefers-color-scheme: light)').matches
-          ? 'light'
-          : 'dark'
-        : theme
-    document.documentElement.dataset.theme = resolved
-    document.documentElement.style.setProperty('--accent', settings.value.accent)
-    document.documentElement.style.setProperty(
-      '--accent-soft',
-      `${settings.value.accent}22`
-    )
-    document.documentElement.style.setProperty('--fs-mono', `${settings.value.fontSize}px`)
-    document.documentElement.style.setProperty('--font-mono', settings.value.fontFamily)
+    const extras = useState<Theme[]>(EXTENSION_THEMES_KEY, () => []).value
+    const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches
+    const active = resolveTheme(theme, [...builtinThemes, ...extras], prefersLight)
+    applyThemeVars(active, {
+      accent: settings.value.accent,
+      fontSize: settings.value.fontSize,
+      fontFamily: settings.value.fontFamily
+    })
   }
 
   async function init() {
     if (ready.value) return
     try {
       const loaded = await call<Settings>('get_settings')
-      settings.value = { ...defaults, ...loaded, ai: { ...defaults.ai, ...loaded.ai } }
+      settings.value = {
+        ...defaultSettings,
+        ...loaded,
+        ai: { ...defaultSettings.ai, ...loaded.ai }
+      }
     } catch (err) {
       console.warn('[kudo] settings unavailable', err)
     }

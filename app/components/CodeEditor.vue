@@ -38,7 +38,7 @@ import type { Diagnostic as CmDiagnostic } from '@codemirror/lint'
 import { hoverTooltip } from '@codemirror/view'
 import type { Text } from '@codemirror/state'
 import { renderMarkdown } from '../lib/markdown'
-import { tags as t } from '@lezer/highlight'
+import { tags as t, type Tag } from '@lezer/highlight'
 import { javascript } from '@codemirror/lang-javascript'
 import { json } from '@codemirror/lang-json'
 import { css } from '@codemirror/lang-css'
@@ -54,6 +54,7 @@ import { standardSQL } from '@codemirror/legacy-modes/mode/sql'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { dockerFile } from '@codemirror/legacy-modes/mode/dockerfile'
 import type { EditorTab } from '../lib/types'
+import type { SyntaxKey, Theme } from '../lib/themes'
 
 const props = defineProps<{ tab: EditorTab; gotoLine?: number | null }>()
 const emit = defineEmits<{
@@ -64,7 +65,7 @@ const emit = defineEmits<{
 
 const ide = useIde()
 const lsp = useLsp()
-const effectiveTheme = useEffectiveTheme()
+const themes = useThemes()
 const host = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
 const wrapCompartment = new Compartment()
@@ -72,46 +73,54 @@ const tabCompartment = new Compartment()
 const highlightCompartment = new Compartment()
 let syncTimer: ReturnType<typeof setTimeout> | null = null
 
-const darkHighlight = HighlightStyle.define([
-  { tag: t.keyword, color: '#c792ea' },
-  { tag: [t.operator, t.punctuation], color: '#89ddff' },
-  { tag: [t.string], color: '#c3e88d' },
-  { tag: [t.number, t.bool, t.atom], color: '#f78c6c' },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: '#5c6773', fontStyle: 'italic' },
-  { tag: [t.variableName, t.propertyName], color: '#d6deeb' },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: '#82aaff' },
-  { tag: [t.typeName, t.className, t.namespace], color: '#ffcb6b' },
-  { tag: [t.tagName], color: '#f07178' },
-  { tag: [t.attributeName], color: '#c792ea' },
-  { tag: [t.heading], color: '#d4a73c', fontWeight: '600' },
-  { tag: [t.link, t.url], color: '#6cb6ff' },
-  { tag: [t.emphasis], fontStyle: 'italic' },
-  { tag: [t.strong], fontWeight: '700' },
-  { tag: [t.meta], color: '#8aa9c9' },
-  { tag: [t.invalid], color: '#e4676b' }
-])
+const syntaxTags: Record<SyntaxKey, Tag[]> = {
+  keyword: [t.keyword, t.modifier, t.controlKeyword, t.operatorKeyword, t.self],
+  operator: [t.operator, t.punctuation, t.bracket, t.separator],
+  string: [t.string, t.special(t.string), t.regexp, t.character, t.attributeValue],
+  number: [t.number, t.bool, t.atom, t.null, t.integer, t.float],
+  comment: [t.comment, t.lineComment, t.blockComment, t.docComment],
+  variable: [t.variableName, t.propertyName, t.definition(t.variableName), t.local(t.variableName)],
+  function: [t.function(t.variableName), t.function(t.propertyName), t.macroName],
+  type: [t.typeName, t.className, t.namespace, t.standard(t.typeName)],
+  tag: [t.tagName, t.angleBracket],
+  attribute: [t.attributeName, t.labelName],
+  heading: [t.heading, t.heading1, t.heading2, t.heading3, t.heading4, t.heading5, t.heading6],
+  link: [t.link, t.url],
+  meta: [t.meta, t.annotation, t.processingInstruction, t.documentMeta],
+  invalid: [t.invalid]
+}
 
-const lightHighlight = HighlightStyle.define([
-  { tag: t.keyword, color: '#a626a4' },
-  { tag: [t.operator, t.punctuation], color: '#0550ae' },
-  { tag: [t.string], color: '#0a7d33' },
-  { tag: [t.number, t.bool, t.atom], color: '#b75501' },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: '#8b949e', fontStyle: 'italic' },
-  { tag: [t.variableName, t.propertyName], color: '#24292f' },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: '#0550ae' },
-  { tag: [t.typeName, t.className, t.namespace], color: '#953800' },
-  { tag: [t.tagName], color: '#c41a16' },
-  { tag: [t.attributeName], color: '#8250df' },
-  { tag: [t.heading], color: '#9a6700', fontWeight: '600' },
-  { tag: [t.link, t.url], color: '#0b5cad' },
-  { tag: [t.emphasis], fontStyle: 'italic' },
-  { tag: [t.strong], fontWeight: '700' },
-  { tag: [t.meta], color: '#57606a' },
-  { tag: [t.invalid], color: '#d1242f' }
-])
+function highlightFor(theme: Theme) {
+  const rules = (Object.keys(theme.syntax) as SyntaxKey[])
+    .map((key) => {
+      const style = theme.syntax[key]
+      if (!style?.color) return null
+      return {
+        tag: syntaxTags[key],
+        color: style.color,
+        ...(style.italic ? { fontStyle: 'italic' as const } : {}),
+        ...(style.bold ? { fontWeight: '600' as const } : {})
+      }
+    })
+    .filter((rule) => rule !== null)
+  return HighlightStyle.define(rules)
+}
 
-const activeHighlight = () =>
-  syntaxHighlighting(effectiveTheme.value === 'light' ? lightHighlight : darkHighlight)
+const activeHighlight = () => syntaxHighlighting(highlightFor(themes.active.value))
+
+/** Snippets from extensions are inserted by the command palette. */
+function onInsert(event: Event) {
+  const text = (event as CustomEvent<string>).detail
+  if (!view || typeof text !== 'string') return
+  if (ide.activePath.value !== props.tab.path) return
+  const { from, to } = view.state.selection.main
+  view.dispatch({
+    changes: { from, to, insert: text },
+    selection: { anchor: from + text.length },
+    scrollIntoView: true
+  })
+  view.focus()
+}
 
 function languageFor(language: string) {
   switch (language) {
@@ -285,6 +294,7 @@ function lspExtensions() {
 
 onMounted(() => {
   if (!host.value) return
+  window.addEventListener('kudo:editor-insert', onInsert)
   view = new EditorView({
     parent: host.value,
     state: EditorState.create({
@@ -355,6 +365,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('kudo:editor-insert', onInsert)
   if (syncTimer) {
     clearTimeout(syncTimer)
     syncTimer = null
@@ -392,7 +403,7 @@ watch(
   }
 )
 
-watch(effectiveTheme, () => {
+watch(themes.active, () => {
   view?.dispatch({ effects: highlightCompartment.reconfigure(activeHighlight()) })
 })
 

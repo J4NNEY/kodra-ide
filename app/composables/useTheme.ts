@@ -1,3 +1,5 @@
+import { EXTENSION_THEMES_KEY, builtinThemes, kindOfTheme, type Theme } from '../lib/themes'
+
 /**
  * Resolves the theme the UI is actually showing (system preference included)
  * so canvas-based widgets (xterm, CodeMirror highlighting) can follow it.
@@ -23,11 +25,13 @@ export function usePrefersLight() {
 export function useEffectiveTheme() {
   const ide = useIde()
   const prefersLight = usePrefersLight()
+  const extensionThemes = useState<Theme[]>(EXTENSION_THEMES_KEY, () => [])
 
   return computed<'dark' | 'light'>(() => {
     const theme = ide.settings.value.theme
-    if (theme === 'light') return 'light'
-    if (theme === 'system') return prefersLight.value ? 'light' : 'dark'
-    return 'dark'
+    if (theme === 'system' || theme === 'auto') {
+      return prefersLight.value ? 'light' : 'dark'
+    }
+    return kindOfTheme(theme, [...builtinThemes, ...extensionThemes.value])
   })
 }
