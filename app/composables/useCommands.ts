@@ -214,6 +214,14 @@ export function useCommands() {
       }
     },
     {
+      id: 'terminal.close',
+      label: 'Terminal: Close Active Session',
+      group: 'Terminal',
+      run: () => {
+        window.dispatchEvent(new CustomEvent('kudo:terminal-close'))
+      }
+    },
+    {
       id: 'agent.new',
       label: 'Agent: New Chat',
       group: 'Agent',

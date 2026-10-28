@@ -11,7 +11,7 @@ public screenshots and the UI is written from scratch.
 | Area | What works |
 | --- | --- |
 | Editor | CodeMirror 6, syntax highlighting for 20+ languages, tabs, dirty state, quick open (`Ctrl+P`), go to line, find/replace in file |
-| Terminal | Real PTY (`portable-pty`), xterm.js, resizable panel, shells from settings (PowerShell by default on Windows) |
+| Terminal | Real PTY (`portable-pty`), xterm.js, multiple tabbed sessions, shell picker with detected shells, resizable panel, PowerShell by default on Windows |
 | Workspace | Native folder picker, file tree with inline create/rename/delete, fuzzy search, project-wide search with case/whole-word/regex toggles, previewed replace-all |
 | Source control | Git status, stage/unstage, commit, branch switch, history, diff preview, and worktrees (list, create on a new branch, open, remove, prune stale) |
 | Agent | Streaming chat with OpenAI-compatible and Anthropic providers, tool calling (`list_dir`, `read_file`, `write_file`, `search_files`, `grep`, `run_command`, `read_skill`), inline approval cards, cancellation |
@@ -104,6 +104,19 @@ refused while an affected tab has unsaved edits so those changes can never be lo
 capped at 20,000 matches. In regex mode `$1` expands capture groups; literal mode treats the
 replacement as text.
 
+## Terminals
+
+``Ctrl+` `` toggles the terminal panel and ``Ctrl+Shift+` `` opens another session. Every session is a real
+PTY with its own xterm buffer, so a long-running process keeps going while you work in another tab.
+The tab strip shows a status dot per session (running or exited); close a tab with its `×` to stop
+only that shell. **Clear** wipes the active buffer and **New terminal** starts a session with the
+shell chosen in Settings.
+
+The chevron next to **+** lists the shells actually found on this machine (PowerShell 7, Windows
+PowerShell, Command Prompt, WSL and Bash on Windows; bash/zsh/sh elsewhere) and marks the configured
+default. Up to eight sessions can run at once. Switching workspaces terminates every PTY, because
+Windows keeps the old working directory locked and that would otherwise block removing worktrees.
+
 ## Worktrees
 
 Source Control → Worktrees lists every `git worktree` of the open repository. Creating one asks for
@@ -161,7 +174,8 @@ copy. See [CHANGELOG.md](CHANGELOG.md) for release notes.
 - In dev builds `window.__kudoCall(command, args)` exposes the IPC bridge so the real backend can be
   scripted over the WebView2 DevTools protocol. Start the app with remote debugging enabled
   (`$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS='--remote-debugging-port=9223'; pnpm desktop`) and
-  connect to `http://127.0.0.1:9223`.
+  connect to `http://127.0.0.1:9223`. `window.__kudoOpenFolder(path)` runs the normal folder-switch
+  path (used by the terminal teardown test, since the native picker cannot be scripted).
 - The updater's installer step is the only action that executes a downloaded binary; it always
   requires a manual click on **Install**.
 

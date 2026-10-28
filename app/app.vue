@@ -18,6 +18,13 @@ const booting = ref(true)
 
 useKeybindings()
 
+// Dev-only bridge so E2E sessions can switch folders through the same code
+// path as the File menu (the native picker cannot be driven from CDP).
+if (import.meta.dev && typeof window !== 'undefined') {
+  ;(window as unknown as Record<string, unknown>).__kudoOpenFolder = (path: string) =>
+    ide.openFolder(path)
+}
+
 function dragWidth(event: PointerEvent, kind: 'sidebar' | 'chat') {
   event.preventDefault()
   const state = kind === 'sidebar' ? sidebarWidth : chatWidth

@@ -19,6 +19,105 @@ struct PtyExit {
     id: String,
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalShellInfo {
+    pub id: String,
+    pub label: String,
+    pub path: String,
+    pub is_default: bool,
+}
+
+#[cfg(windows)]
+const SHELL_CANDIDATES: [(&str, &str); 5] = [
+    ("pwsh", "PowerShell 7"),
+    ("powershell", "Windows PowerShell"),
+    ("cmd", "Command Prompt"),
+    ("wsl", "WSL"),
+    ("bash", "Bash"),
+];
+
+#[cfg(not(windows))]
+const SHELL_CANDIDATES: [(&str, &str); 3] = [("bash", "Bash"), ("zsh", "Zsh"), ("sh", "Shell")];
+
+fn shell_label(name: &str) -> String {
+    match name.to_ascii_lowercase().as_str() {
+        "pwsh" => "PowerShell 7".into(),
+        "powershell" => "Windows PowerShell".into(),
+        "cmd" => "Command Prompt".into(),
+        "wsl" => "WSL".into(),
+        "bash" => "Bash".into(),
+        "zsh" => "Zsh".into(),
+        other if other.is_empty() => "Shell".into(),
+        other => other.to_string(),
+    }
+}
+
+fn same_path(a: &str, b: &str) -> bool {
+    a.replace('/', "\\").eq_ignore_ascii_case(&b.replace('/', "\\"))
+}
+
+/// Shells that can actually be launched on this machine, with the configured
+/// one flagged as the default. The UI builds its "new terminal" menu from this.
+#[tauri::command]
+pub fn terminal_shells(state: State<'_, AppState>) -> Vec<TerminalShellInfo> {
+    let configured = state.settings.read().terminal_shell.clone();
+    let configured_path = crate::util::which(&configured)
+        .map(|p| crate::util::display_path(&p).to_string_lossy().to_string())
+        .unwrap_or_else(|| configured.clone());
+
+    let mut shells: Vec<TerminalShellInfo> = Vec::new();
+    for (name, label) in SHELL_CANDIDATES {
+        let Some(path) = crate::util::which(name) else {
+            continue;
+        };
+        let path = crate::util::display_path(&path).to_string_lossy().to_string();
+        shells.push(TerminalShellInfo {
+            id: name.into(),
+            label: label.into(),
+            is_default: same_path(&path, &configured_path),
+            path,
+        });
+    }
+
+    // A custom shell (absolute path, non-standard executable) still needs a menu
+    // entry even though it is not one of the well-known candidates.
+    if !shells.iter().any(|s| s.is_default) && !configured.trim().is_empty() {
+        let stem = std::path::Path::new(&configured_path)
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_ascii_lowercase())
+            .unwrap_or_else(|| "shell".into());
+        shells.insert(
+            0,
+            TerminalShellInfo {
+                id: stem.clone(),
+                label: shell_label(&stem),
+                is_default: true,
+                path: configured_path,
+            },
+        );
+    }
+
+    if !shells.iter().any(|s| s.is_default) {
+        if let Some(first) = shells.first_mut() {
+            first.is_default = true;
+        }
+    }
+    shells
+}
+
+/// Terminate every live shell. Used when the workspace changes (Windows locks
+/// the old working directory) and on panel shutdown.
+#[tauri::command]
+pub fn pty_kill_all(state: State<'_, AppState>) -> usize {
+    let sessions: Vec<PtySession> = state.ptys.lock().drain().map(|(_, s)| s).collect();
+    let count = sessions.len();
+    for mut session in sessions {
+        session.terminate();
+    }
+    count
+}
+
 #[tauri::command]
 pub fn pty_spawn(
     app: AppHandle,

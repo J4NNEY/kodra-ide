@@ -13,6 +13,7 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, ChildStdout};
 
 use crate::state::{AppState, LspSession};
+use crate::util::which;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -329,30 +330,6 @@ pub async fn lsp_notify(
         .await
 }
 
-/// Resolve an executable the way a shell would, without spawning one.
-fn which(command: &str) -> Option<String> {
-    let path = std::env::var_os("PATH")?;
-    let extensions: Vec<String> = if cfg!(windows) {
-        std::env::var("PATHEXT")
-            .unwrap_or_else(|_| ".EXE;.CMD;.BAT;.COM".into())
-            .split(';')
-            .map(|ext| ext.to_ascii_lowercase())
-            .collect()
-    } else {
-        vec![String::new()]
-    };
-
-    for dir in std::env::split_paths(&path) {
-        for ext in &extensions {
-            let candidate = dir.join(format!("{command}{ext}"));
-            if candidate.is_file() {
-                return Some(candidate.to_string_lossy().to_string());
-            }
-        }
-    }
-    None
-}
-
 /// Report which well-known language servers exist on this machine.
 #[tauri::command]
 pub async fn lsp_detect() -> Result<HashMap<String, String>, String> {
@@ -369,7 +346,9 @@ pub async fn lsp_detect() -> Result<HashMap<String, String>, String> {
     ];
     Ok(CANDIDATES
         .iter()
-        .filter_map(|name| which(name).map(|path| (name.to_string(), path)))
+        .filter_map(|name| {
+            which(name).map(|path| (name.to_string(), path.to_string_lossy().to_string()))
+        })
         .collect())
 }
 

@@ -16,7 +16,7 @@ import {
   SquareTerminal,
   X
 } from 'lucide-vue-next'
-import type { Settings, UpdateCheck } from '../lib/types'
+import type { Settings, TerminalShellInfo, UpdateCheck } from '../lib/types'
 import type { Theme } from '../lib/themes'
 import { call } from '../lib/api'
 
@@ -58,7 +58,24 @@ const tabs = [
   { id: 'about', label: 'About', icon: Info }
 ]
 
-const shellChoices = ['powershell.exe', 'pwsh.exe', 'cmd.exe', 'wsl.exe', 'bash', 'zsh']
+const shellFallbacks = ['powershell.exe', 'pwsh.exe', 'cmd.exe', 'wsl.exe', 'bash', 'zsh']
+const shells = ref<TerminalShellInfo[]>([])
+const shellChoices = computed(() =>
+  shells.value.length
+    ? shells.value
+    : shellFallbacks.map((shell) => ({
+        id: shell,
+        label: shell,
+        path: shell,
+        isDefault: false
+      }))
+)
+
+/** Settings may hold a bare command (`powershell.exe`) or a full path. */
+function isShellSelected(path: string) {
+  const name = (value: string) => value.split(/[\\/]/).pop()?.toLowerCase() ?? ''
+  return name(draft.value.terminalShell) === name(path)
+}
 
 const shortcuts = [
   { keys: 'Ctrl+P', action: 'Go to file' },
@@ -164,7 +181,7 @@ async function checkUpdates() {
   try {
     updateInfo.value = await call<UpdateCheck>('update_check', {
       feedUrl: draft.value.updateFeed,
-      current: appInfo.value?.version ?? '0.3.0'
+      current: appInfo.value?.version ?? '0.4.0'
     })
     if (!updateInfo.value.available) ide.notify('Kudo is up to date', 'success')
   } catch (err) {
@@ -219,6 +236,9 @@ watch(
     }
     draft.value = JSON.parse(JSON.stringify(ide.settings.value))
     models.value = []
+    if (!shells.value.length) {
+      shells.value = await call<TerminalShellInfo[]>('terminal_shells').catch(() => [])
+    }
     if (!appInfo.value) {
       appInfo.value = await call<AppInfo>('app_info').catch(() => null)
     }
@@ -242,7 +262,7 @@ watch(
       <div class="modal settings-modal">
         <div class="modal-head">
           <h2>Settings</h2>
-          <span class="hint">Kudo {{ appInfo?.version ?? '0.3.0' }}</span>
+          <span class="hint">Kudo {{ appInfo?.version ?? '0.4.0' }}</span>
           <div style="flex: 1" />
           <button class="icon-btn" @click="close"><X :size="15" /></button>
         </div>
@@ -440,12 +460,13 @@ watch(
                 <div class="chips">
                   <button
                     v-for="shell in shellChoices"
-                    :key="shell"
+                    :key="shell.id"
                     class="chip"
-                    :class="{ active: draft.terminalShell === shell }"
-                    @click="draft.terminalShell = shell"
+                    :class="{ active: isShellSelected(shell.path) }"
+                    :title="shell.path"
+                    @click="draft.terminalShell = shell.path"
                   >
-                    {{ shell }}
+                    {{ shell.label }}
                   </button>
                 </div>
                 <span class="hint">Used for new terminal sessions on this machine.</span>
@@ -645,7 +666,7 @@ watch(
               <div class="about">
                 <div class="empty-mark" style="width: 52px; height: 52px; font-size: 22px">K</div>
                 <div>
-                  <h3 style="margin: 0 0 2px">Kudo {{ appInfo?.version ?? '0.3.0' }}</h3>
+                  <h3 style="margin: 0 0 2px">Kudo {{ appInfo?.version ?? '0.4.0' }}</h3>
                   <p class="hint" style="margin: 0">
                     A clean-room desktop IDE built with Tauri v2, Nuxt 3 and Rust.
                   </p>
@@ -677,7 +698,7 @@ watch(
 
                 <div v-if="updateInfo?.available" class="update-body">
                   <div class="row" style="justify-content: space-between">
-                    <span class="mono">{{ appInfo?.version ?? '0.3.0' }} → {{ updateInfo.latestVersion }}</span>
+                    <span class="mono">{{ appInfo?.version ?? '0.4.0' }} → {{ updateInfo.latestVersion }}</span>
                     <span class="hint">{{ updateInfo.publishedAt }}</span>
                   </div>
                   <pre v-if="updateInfo.notes" class="update-notes">{{ updateInfo.notes }}</pre>

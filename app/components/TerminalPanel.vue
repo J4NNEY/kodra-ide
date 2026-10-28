@@ -1,336 +1,268 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import '@xterm/xterm/css/xterm.css'
-import { Terminal } from '@xterm/xterm'
-import { FitAddon } from '@xterm/addon-fit'
-import { WebLinksAddon } from '@xterm/addon-web-links'
-import { Eraser, Plus, SquareTerminal, Trash2, X } from 'lucide-vue-next'
-import { call, isTauri, listen } from '../lib/api'
-import { isColor } from '../lib/themes'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ChevronDown, Eraser, Plus, SquareTerminal, Trash2, X } from 'lucide-vue-next'
+import { call } from '../lib/api'
+import type { TerminalShellInfo } from '../lib/types'
 import { useTerminalEpoch } from '../composables/useCommands'
 import ProblemsPanel from './ProblemsPanel.vue'
 
 const ide = useIde()
 const lsp = useLsp()
-const themes = useThemes()
-const { lines: outputLines, push: pushOutput, clear: clearOutput } = useOutputLog()
+const { lines: outputLines, clear: clearOutput } = useOutputLog()
 const epoch = useTerminalEpoch()
 
-const host = ref<HTMLDivElement | null>(null)
-const status = ref<'idle' | 'running' | 'exited'>('idle')
+const MAX_SESSIONS = 8
 
-let term: Terminal | null = null
-let fit: FitAddon | null = null
-let observer: ResizeObserver | null = null
-let unlisteners: Array<() => void> = []
-let sessionId = ''
-let mockBuffer = ''
-let bootedPath: string | null = null
+type TermStatus = 'starting' | 'running' | 'exited'
 
-function xtermTheme() {
-  const theme = themes.active.value
-  const accent = isColor(ide.settings.value.accent)
-    ? ide.settings.value.accent
-    : theme.colors.accent
-  const light = theme.kind === 'light'
-  const transparent = 'rgba(0,0,0,0)'
+interface TermSession {
+  id: string
+  shell: string
+  label: string
+  status: TermStatus
+}
 
+const sessions = ref<TermSession[]>([])
+const activeId = ref('')
+const shells = ref<TerminalShellInfo[]>([])
+const menuOpen = ref(false)
+
+const controls = new Map<string, { clear: () => void; focus: () => void; fitNow: () => void }>()
+
+let bootedPath: string | null = ide.workspace.value?.path ?? null
+let sessionSeq = 0
+
+const activeSession = computed(
+  () => sessions.value.find((session) => session.id === activeId.value) ?? null
+)
+
+const defaultShell = computed<TerminalShellInfo>(() => {
+  const configured = ide.settings.value.terminalShell
+  const match = shells.value.find((shell) => sameShell(shell.path, configured))
+  if (match) return match
+  const detected = shells.value.find((shell) => shell.isDefault)
+  if (detected) return detected
   return {
-    background: theme.terminal?.background ?? transparent,
-    foreground: theme.terminal?.foreground ?? theme.colors.text,
-    cursor: theme.terminal?.cursor ?? accent,
-    cursorAccent: theme.colors.surface1,
-    selectionBackground: theme.terminal?.selection ?? `${accent}33`,
-    black: light ? '#24292f' : '#1a1a1c',
-    red: theme.colors.red,
-    green: theme.colors.green,
-    yellow: accent,
-    blue: theme.colors.blue,
-    magenta: theme.colors.purple,
-    cyan: light ? '#1b7c83' : '#89ddff',
-    white: theme.colors.text,
-    brightBlack: theme.colors.textFaint,
-    brightRed: theme.colors.red,
-    brightGreen: theme.colors.green,
-    brightYellow: theme.colors.accentStrong,
-    brightBlue: theme.colors.blue,
-    brightMagenta: theme.colors.purple,
-    brightCyan: light ? '#3192aa' : '#a8e9ff',
-    brightWhite: '#ffffff'
+    id: 'shell',
+    label: prettyShell(configured),
+    path: configured,
+    isDefault: true
   }
+})
+
+function sameShell(a: string, b: string): boolean {
+  const name = (value: string) => value.split(/[\\/]/).pop()?.toLowerCase() ?? ''
+  return name(a) === name(b)
 }
 
-function write(text: string) {
-  term?.write(text)
+function shellIsCurrent(shell: TerminalShellInfo): boolean {
+  return sameShell(shell.path, ide.settings.value.terminalShell)
 }
 
-/** xterm throws if it is asked to measure a zero-sized or unpainted viewport. */
-function safeFit(): boolean {
-  const el = host.value
-  if (!fit || !el || !el.clientWidth || !el.clientHeight) return false
+function shellName(path: string): string {
+  const base = path.split(/[\\/]/).pop() ?? path
+  return base.replace(/\.exe$/i, '') || 'shell'
+}
+
+function prettyShell(path: string): string {
+  const name = shellName(path).toLowerCase()
+  if (name === 'pwsh') return 'PowerShell 7'
+  if (name === 'powershell') return 'Windows PowerShell'
+  if (name === 'cmd') return 'Command Prompt'
+  if (name === 'wsl') return 'WSL'
+  if (name === 'bash') return 'Bash'
+  return name
+}
+
+async function loadShells() {
   try {
-    fit.fit()
-    return true
+    shells.value = await call<TerminalShellInfo[]>('terminal_shells')
   } catch (err) {
-    console.warn('[kudo] terminal fit skipped', err)
-    return false
+    console.warn('[kudo] could not list shells', err)
   }
 }
 
-function promptMock() {
-  write('\r\n\x1b[38;5;179mPS\x1b[0m \x1b[38;5;245m' + 'C:\\demo\\kudo-workspace' + '\x1b[0m> ')
-}
-
-function mockBanner() {
-  write('\x1b[38;5;179mKudo terminal\x1b[0m \x1b[38;5;245m(browser mock)\x1b[0m\r\n')
-  write('\x1b[38;5;245mStart the desktop shell with `pnpm desktop` for a real PowerShell session.\x1b[0m')
-  promptMock()
-}
-
-function handleMockData(data: string) {
-  for (const ch of data) {
-    if (ch === '\r') {
-      write('\r\n')
-      const command = mockBuffer.trim()
-      mockBuffer = ''
-      if (!command) {
-        promptMock()
-      } else if (command === 'clear' || command === 'cls') {
-        write('\x1b[2J\x1b[H')
-        promptMock()
-      } else if (command === 'help') {
-        write('Mock shell — try `clear`, `help`, or run `pnpm desktop`.\r\n')
-        promptMock()
-      } else {
-        write(`\x1b[38;5;245m"${command}" is not available in the browser mock.\x1b[0m\r\n`)
-        promptMock()
-      }
-      continue
-    }
-    if (ch === '\u007f') {
-      if (mockBuffer.length) {
-        mockBuffer = mockBuffer.slice(0, -1)
-        write('\b \b')
-      }
-      continue
-    }
-    if (ch === '\u0003') {
-      mockBuffer = ''
-      write('^C')
-      promptMock()
-      continue
-    }
-    if (ch === '\t') continue
-    if (ch >= ' ') {
-      mockBuffer += ch
-      write(ch)
+function controlRef(id: string) {
+  return (el: unknown) => {
+    if (el) {
+      controls.set(id, el as { clear: () => void; focus: () => void; fitNow: () => void })
+    } else {
+      controls.delete(id)
     }
   }
 }
 
-async function onData(data: string) {
-  if (!isTauri()) {
-    handleMockData(data)
+function newSession(shell: TerminalShellInfo = defaultShell.value) {
+  if (sessions.value.length >= MAX_SESSIONS) {
+    ide.notify(`At most ${MAX_SESSIONS} terminal sessions can run at once`, 'error')
     return
   }
-  try {
-    await call('pty_write', { id: sessionId, data })
-  } catch (err) {
-    pushOutput('terminal', String(err))
+  const path = shell.path || ide.settings.value.terminalShell
+  const name = shell.label || prettyShell(path)
+  let label = name
+  let suffix = 1
+  while (sessions.value.some((session) => session.label === label)) {
+    suffix++
+    label = `${name} (${suffix})`
+  }
+  const id = `kudo-${Date.now().toString(36)}-${++sessionSeq}`
+  sessions.value = [
+    ...sessions.value,
+    {
+      id,
+      shell: path,
+      label,
+      status: 'starting'
+    }
+  ]
+  activeId.value = id
+  menuOpen.value = false
+  ide.panelTab.value = 'terminal'
+  ide.panelVisible.value = true
+  void nextTick(() => controls.get(id)?.focus())
+}
+
+function ensureSession() {
+  if (!sessions.value.length) newSession()
+}
+
+function selectSession(id: string) {
+  activeId.value = id
+  ide.panelTab.value = 'terminal'
+  void nextTick(() => {
+    const control = controls.get(id)
+    control?.fitNow()
+    control?.focus()
+  })
+}
+
+function closeSession(id: string) {
+  const index = sessions.value.findIndex((session) => session.id === id)
+  if (index < 0) return
+  controls.delete(id)
+  sessions.value = sessions.value.filter((session) => session.id !== id)
+  if (activeId.value === id) {
+    const neighbour = sessions.value[index] ?? sessions.value[index - 1] ?? null
+    activeId.value = neighbour?.id ?? ''
+    if (neighbour) void nextTick(() => controls.get(neighbour.id)?.focus())
   }
 }
 
-let bootToken = 0
-
-async function disposeCurrent() {
-  for (const off of unlisteners) off()
-  unlisteners = []
-  if (isTauri() && sessionId) {
-    await call('pty_kill', { id: sessionId }).catch(() => {})
-  }
-  sessionId = ''
-  observer?.disconnect()
-  observer = null
-  term?.dispose()
-  term = null
-  fit = null
-  status.value = 'idle'
+function onStatus(id: string, status: 'running' | 'exited') {
+  sessions.value = sessions.value.map((session) =>
+    session.id === id ? { ...session, status } : session
+  )
 }
 
-async function teardown() {
-  bootToken++
-  await disposeCurrent()
+function clearActive() {
+  controls.get(activeId.value)?.clear()
 }
 
-async function boot() {
-  const token = ++bootToken
-  await disposeCurrent()
+async function killAll() {
+  await call('pty_kill_all').catch(() => {})
+  sessions.value = []
+  activeId.value = ''
+}
+
+async function maybeBoot() {
+  if (!ide.ready.value) return
+  if (!ide.panelVisible.value || ide.panelTab.value !== 'terminal') return
   await nextTick()
-  if (token !== bootToken || !host.value) return
-
-  const localId = `kudo-${Math.random().toString(36).slice(2, 9)}`
-  sessionId = localId
-
-  const local = new Terminal({
-    fontFamily: ide.settings.value.fontFamily,
-    fontSize: ide.settings.value.terminalFontSize,
-    lineHeight: 1.35,
-    cursorBlink: true,
-    cursorStyle: 'bar',
-    allowProposedApi: true,
-    scrollback: 6000,
-    theme: xtermTheme()
-  })
-  term = local
-
-  const localFit = new FitAddon()
-  fit = localFit
-  local.loadAddon(localFit)
-  local.loadAddon(new WebLinksAddon((_event, uri) => window.open(uri, '_blank')))
-  local.open(host.value)
-  local.onData(onData)
-  bootedPath = ide.workspace.value?.path ?? null
-
-  await new Promise((resolve) => requestAnimationFrame(resolve))
-  if (token !== bootToken) return
-
-  safeFit()
-  pushOutput('terminal', `session started (${local.cols}x${local.rows})`)
-
-  if (isTauri()) {
-    unlisteners.push(
-      await listen<{ id: string; data: string }>('pty:data', (payload) => {
-        if (payload.id === sessionId) term?.write(payload.data)
-      })
-    )
-    unlisteners.push(
-      await listen<{ id: string }>('pty:exit', (payload) => {
-        if (payload.id !== sessionId) return
-        status.value = 'exited'
-        term?.writeln('\r\n\x1b[38;5;245m[process exited]\x1b[0m')
-        pushOutput('terminal', 'process exited')
-      })
-    )
-
-    if (token !== bootToken) return
-
-    try {
-      await call('pty_spawn', {
-        id: localId,
-        shell: ide.settings.value.terminalShell,
-        cwd: ide.workspace.value?.path ?? null,
-        cols: local.cols,
-        rows: local.rows
-      })
-      status.value = 'running'
-      pushOutput('terminal', `spawned ${ide.settings.value.terminalShell}`)
-    } catch (err) {
-      status.value = 'exited'
-      local.writeln(`\x1b[31m${String(err)}\x1b[0m`)
-      pushOutput('terminal', String(err))
-    }
-  } else {
-    status.value = 'running'
-    mockBanner()
-  }
-
-  if (token !== bootToken) return
-
-  observer = new ResizeObserver(() => {
-    if (!term || !safeFit()) return
-    if (isTauri() && sessionId) {
-      call('pty_resize', { id: sessionId, cols: term.cols, rows: term.rows }).catch(() => {})
-    }
-  })
-  if (host.value) observer.observe(host.value)
-
-  // Layout can settle a frame after mount (panel height, scrollbar, fonts).
-  setTimeout(() => {
-    if (token === bootToken) safeFit()
-  }, 150)
-}
-
-function clear() {
-  term?.clear()
-  term?.focus()
-}
-
-function restart() {
-  boot()
-}
-
-function close() {
-  ide.panelVisible.value = false
+  ensureSession()
 }
 
 function onClearEvent() {
-  clear()
+  clearActive()
 }
 
-onMounted(() => {
-  if (ide.ready.value) boot()
+function onCloseEvent() {
+  if (activeId.value) closeSession(activeId.value)
+}
+
+function onDocClick(event: MouseEvent) {
+  if (!menuOpen.value) return
+  const target = event.target as HTMLElement | null
+  if (target?.closest('.term-shell-wrap')) return
+  menuOpen.value = false
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && menuOpen.value) menuOpen.value = false
+}
+
+function stamp(ms: number) {
+  return new Date(ms).toLocaleTimeString([], { hour12: false })
+}
+
+onMounted(async () => {
   window.addEventListener('kudo:terminal-clear', onClearEvent)
+  window.addEventListener('kudo:terminal-close', onCloseEvent)
+  document.addEventListener('click', onDocClick)
+  document.addEventListener('keydown', onKeydown)
+  await loadShells()
+  await maybeBoot()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('kudo:terminal-clear', onClearEvent)
+  window.removeEventListener('kudo:terminal-close', onCloseEvent)
+  document.removeEventListener('click', onDocClick)
+  document.removeEventListener('keydown', onKeydown)
+  void call('pty_kill_all').catch(() => {})
 })
 
 watch(
   () => ide.ready.value,
   (ready) => {
-    if (ready && !term) boot()
+    if (ready) void maybeBoot()
   }
 )
-
-onBeforeUnmount(() => {
-  window.removeEventListener('kudo:terminal-clear', onClearEvent)
-  teardown()
-})
 
 watch(epoch, () => {
-  if (ide.panelVisible.value) boot()
+  if (ide.panelVisible.value) newSession()
 })
-
-watch(
-  () => ide.workspace.value?.path,
-  async (next) => {
-    if (next === bootedPath) return
-    // Switching folders must release the old PTY: Windows keeps the working
-    // directory locked, which blocks removing git worktrees.
-    await teardown()
-    bootedPath = null
-    if (next && ide.panelVisible.value) await boot()
-  }
-)
 
 watch(
   () => ide.panelVisible.value,
   async (visible) => {
     if (!visible) return
     await nextTick()
-    if (!term) {
-      await boot()
+    if (!sessions.value.length) {
+      ensureSession()
       return
     }
-    safeFit()
-    term?.focus()
+    const control = controls.get(activeId.value)
+    control?.fitNow()
+    control?.focus()
   }
 )
 
 watch(
-  () => ide.settings.value.terminalFontSize,
-  (size) => {
-    if (term) {
-      term.options.fontSize = size
-      nextTick(() => safeFit())
+  () => ide.panelTab.value,
+  async (tab) => {
+    if (tab !== 'terminal') return
+    await nextTick()
+    if (!sessions.value.length) {
+      ensureSession()
+      return
     }
+    const control = controls.get(activeId.value)
+    control?.fitNow()
+    control?.focus()
   }
 )
 
-watch([() => themes.active.value.id, () => ide.settings.value.accent], () => {
-  if (term) term.options.theme = xtermTheme()
-})
-
-function stamp(ms: number) {
-  return new Date(ms).toLocaleTimeString([], { hour12: false })
-}
+watch(
+  () => ide.workspace.value?.path,
+  async (next) => {
+    if (next === bootedPath) return
+    bootedPath = next ?? null
+    // Switching folders must release the old PTYs: Windows keeps the working
+    // directory locked, which blocks removing git worktrees.
+    await killAll()
+    await maybeBoot()
+  }
+)
 </script>
 
 <template>
@@ -367,19 +299,102 @@ function stamp(ms: number) {
 
       <div style="flex: 1" />
 
-      <span v-if="status === 'running'" class="dot-live" style="margin-right: 6px" />
-      <button class="icon-btn" title="New terminal" @click="restart">
-        <Plus :size="14" />
-      </button>
-      <button class="icon-btn" title="Clear" @click="clear">
+      <span v-if="activeSession?.status === 'running'" class="dot-live" style="margin-right: 6px" />
+      <div class="term-shell-wrap">
+        <button class="icon-btn term-new" title="New terminal" @click="newSession()">
+          <Plus :size="14" />
+        </button>
+        <button
+          class="icon-btn term-shell-btn"
+          title="Choose shell"
+          @click.stop="menuOpen = !menuOpen"
+        >
+          <ChevronDown :size="11" />
+        </button>
+        <div v-if="menuOpen" class="term-shell-menu">
+          <div class="shell-menu-head">New terminal</div>
+          <button
+            v-for="shell in shells"
+            :key="shell.id"
+            class="shell-item"
+            :class="{ active: shellIsCurrent(shell) }"
+            :title="shell.path"
+            @click="newSession(shell)"
+          >
+            <span class="shell-item-name">{{ shell.label }}</span>
+            <span v-if="shellIsCurrent(shell)" class="shell-item-badge">default</span>
+          </button>
+          <div v-if="!shells.length" class="shell-item empty">No shells detected</div>
+        </div>
+      </div>
+      <button class="icon-btn" title="Clear" @click="clearActive">
         <Eraser :size="14" />
       </button>
-      <button class="icon-btn" title="Close panel" @click="close">
+      <button class="icon-btn" title="Close panel" @click="ide.panelVisible.value = false">
         <X :size="14" />
       </button>
     </div>
 
-    <div v-show="ide.panelTab.value === 'terminal'" ref="host" class="terminal-host" />
+    <div v-show="ide.panelTab.value === 'terminal'" class="term-tabs">
+      <button
+        v-for="session in sessions"
+        :key="session.id"
+        class="term-tab"
+        :class="{ active: session.id === activeId }"
+        :title="session.shell"
+        :data-session-id="session.id"
+        :data-status="session.status"
+        @click="selectSession(session.id)"
+      >
+        <span class="term-dot" :class="session.status" />
+        <span class="term-tab-label">{{ session.label }}</span>
+        <span class="term-close" title="Close session" @click.stop="closeSession(session.id)">
+          <X :size="10" />
+        </span>
+      </button>
+      <button class="icon-btn term-tab-add" title="New terminal" @click="newSession()">
+        <Plus :size="12" />
+      </button>
+    </div>
+
+    <div v-show="ide.panelTab.value === 'terminal'" class="term-body">
+      <div v-if="!sessions.length" class="term-empty">
+        <SquareTerminal :size="22" />
+        <div class="term-empty-title">No terminal sessions</div>
+        <div class="term-empty-hint">
+          Start a shell in the current workspace. Sessions stay alive while you switch tabs.
+        </div>
+        <div class="term-empty-actions">
+          <button class="btn primary sm term-empty-new" @click="newSession()">
+            <Plus :size="12" /> New terminal
+          </button>
+          <button
+            v-for="shell in shells"
+            :key="shell.id"
+            class="btn ghost sm term-empty-shell"
+            @click="newSession(shell)"
+          >
+            {{ shell.label }}
+          </button>
+        </div>
+      </div>
+      <div
+        v-for="session in sessions"
+        v-show="session.id === activeId"
+        :key="session.id"
+        class="term-slot"
+        :data-session-id="session.id"
+        :data-shell="session.shell"
+      >
+        <TerminalSession
+          :ref="controlRef(session.id)"
+          :session-id="session.id"
+          :shell="session.shell"
+          :active="session.id === activeId"
+          @status="onStatus(session.id, $event)"
+        />
+      </div>
+    </div>
 
     <div v-if="ide.panelTab.value === 'problems'" class="panel-body">
       <ProblemsPanel />

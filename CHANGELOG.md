@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0 — 2026-10-28
+
+Terminal sessions are now independent, tabbed PTYs.
+
+- **Multiple sessions** — every tab owns its own xterm instance and PTY, so two shells can run
+  simultaneous commands without sharing output or scrollback. Up to eight sessions are allowed.
+- **Session tabs** — switch between shells without restarting them; each tab shows a running/exited
+  dot and a close button that stops only that PTY. Closing the last tab leaves an empty state with a
+  one-click **New terminal** action.
+- **Shell picker** — `terminal_shells` detects PowerShell 7, Windows PowerShell, Command Prompt, WSL
+  and Bash (bash/zsh/sh elsewhere), labels them and flags the configured default. The chevron next to
+  **+** starts a session with any detected shell; Settings reuses the same list instead of a
+  hard-coded array.
+- **Safe teardown** — `pty_kill_all` runs whenever the workspace changes or the panel unmounts, so
+  every shell (and its children) is terminated before folders are released.
+- **Commands** — `Terminal: New Session` opens an additional tab and
+  `Terminal: Close Active Session` stops the current one from the palette.
+
 ## 0.3.0 — 2026-10-28
 
 Workspace-wide search and replace.

@@ -1594,3 +1594,179 @@ kbd {
   background: transparent !important;
   scrollbar-width: thin;
 }
+
+/* terminal sessions */
+.term-tabs {
+  flex: 0 0 auto;
+  height: 27px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+}
+.term-tabs::-webkit-scrollbar {
+  display: none;
+}
+.term-tab {
+  height: 22px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 190px;
+  padding: 0 6px 0 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+}
+.term-tab:hover {
+  background: var(--glass);
+  color: var(--text);
+}
+.term-tab.active {
+  background: var(--surface-2, var(--glass));
+  border-color: var(--border);
+  color: var(--text);
+}
+.term-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.term-dot {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.term-dot.running {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+}
+.term-dot.exited {
+  background: var(--red);
+}
+.term-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  opacity: 0.55;
+}
+.term-close:hover {
+  background: var(--glass);
+  opacity: 1;
+}
+.term-tab-add {
+  width: 22px;
+  height: 22px;
+}
+.term-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.term-slot {
+  width: 100%;
+  height: 100%;
+}
+.term-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--text-faint);
+  text-align: center;
+  padding: 12px;
+}
+.term-empty-title {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.term-empty-hint {
+  max-width: 380px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.term-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.term-shell-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.term-shell-btn {
+  width: 17px;
+  margin-left: -4px;
+}
+.term-shell-menu {
+  position: absolute;
+  top: 26px;
+  right: 0;
+  z-index: 40;
+  width: 210px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
+}
+.shell-menu-head {
+  padding: 5px 8px 4px;
+  color: var(--text-faint);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.shell-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  text-align: left;
+}
+.shell-item:hover {
+  background: var(--glass);
+}
+.shell-item.active {
+  color: var(--accent);
+}
+.shell-item.empty {
+  color: var(--text-faint);
+  cursor: default;
+}
+.shell-item-name {
+  flex: 1;
+}
+.shell-item-badge {
+  color: var(--text-faint);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+

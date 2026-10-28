@@ -61,6 +61,8 @@ pub fn run() {
             commands::pty::pty_resize,
             commands::pty::pty_kill,
             commands::pty::pty_is_running,
+            commands::pty::pty_kill_all,
+            commands::pty::terminal_shells,
             // agent / ai
             commands::ai::ai_chat,
             commands::ai::ai_cancel,

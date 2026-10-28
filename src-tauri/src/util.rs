@@ -81,6 +81,49 @@ pub fn resolve_in_workspace(root: &Path, raw: &str) -> Result<PathBuf, String> {
     }
 }
 
+/// Resolve an executable the way a shell would, without spawning one. Accepts a
+/// bare command (`pwsh`, `pwsh.exe`) or an explicit path.
+pub fn which(command: &str) -> Option<PathBuf> {
+    let trimmed = command.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let raw = Path::new(trimmed);
+    if raw.is_absolute() || raw.components().count() > 1 {
+        return raw.is_file().then(|| raw.to_path_buf());
+    }
+
+    // A name that already carries an extension is looked up verbatim; otherwise
+    // Windows needs the PATHEXT probes (`pwsh` -> `pwsh.EXE`).
+    let extensions: Vec<String> = if raw.extension().is_some() {
+        vec![String::new()]
+    } else if cfg!(windows) {
+        let mut list: Vec<String> = std::env::var("PATHEXT")
+            .unwrap_or_else(|_| ".EXE;.CMD;.BAT;.COM".into())
+            .split(';')
+            .filter(|ext| !ext.trim().is_empty())
+            .map(|ext| ext.to_ascii_lowercase())
+            .collect();
+        // Extensionless executables exist too (git's `bash`).
+        list.push(String::new());
+        list
+    } else {
+        vec![String::new()]
+    };
+
+    let path = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&path) {
+        for ext in &extensions {
+            let candidate = dir.join(format!("{trimmed}{ext}"));
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
 pub fn human_size(bytes: u64) -> String {
     const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
     let mut value = bytes as f64;

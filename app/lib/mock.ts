@@ -624,7 +624,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'app_info':
       return ok({
         name: 'Kudo',
-        version: '0.3.0',
+        version: '0.4.0',
         platform: 'browser-mock',
         arch: 'wasm',
         configDir: 'localStorage'
@@ -643,6 +643,43 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'pty_resize':
     case 'pty_kill':
       return ok(undefined)
+    case 'pty_kill_all':
+      return ok(0)
+    case 'pty_is_running':
+      return ok(false)
+    case 'terminal_shells': {
+      const configured = loadSettings().terminalShell
+      const configuredName = configured
+        .split(/[\\/]/)
+        .pop()
+        ?.replace(/\.exe$/i, '')
+        .toLowerCase()
+      const shells = [
+        {
+          id: 'pwsh',
+          label: 'PowerShell 7',
+          path: 'C:\\Program Files\\PowerShell\\7\\pwsh.exe'
+        },
+        {
+          id: 'powershell',
+          label: 'Windows PowerShell',
+          path: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
+        },
+        { id: 'cmd', label: 'Command Prompt', path: 'C:\\Windows\\System32\\cmd.exe' },
+        { id: 'wsl', label: 'WSL', path: 'C:\\Windows\\System32\\wsl.exe' },
+        { id: 'bash', label: 'Bash', path: 'C:\\Program Files\\Git\\bin\\bash.exe' }
+      ]
+      const match = shells.find((shell) => shell.id === configuredName)
+      if (!match && configured.trim()) {
+        shells.unshift({
+          id: configuredName || 'shell',
+          label: configuredName || 'Shell',
+          path: configured
+        })
+      }
+      const defaultId = match?.id ?? shells[0]?.id
+      return ok(shells.map((shell) => ({ ...shell, isDefault: shell.id === defaultId })))
+    }
     case 'db_engine_info':
       return ok({ version: '3.46.0 (mock)', available: true })
     case 'db_connect': {
@@ -821,12 +858,12 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
         throw new Error('Set an update feed URL in Settings → About first')
       }
       return ok({
-        currentVersion: '0.3.0',
-        latestVersion: '0.3.0',
+        currentVersion: '0.4.0',
+        latestVersion: '0.4.0',
         available: true,
-        notes: '## Kudo 0.3.0\n\n- Search and replace across the workspace\n- Whole-word and regular expression search\n',
+        notes: '## Kudo 0.4.0\n\n- Search and replace across the workspace\n- Whole-word and regular expression search\n',
         publishedAt: '2026-10-20T00:00:00Z',
-        url: 'https://example.com/kudo_0.3.0_x64-setup.exe',
+        url: 'https://example.com/kudo_0.4.0_x64-setup.exe',
         feed: String(args.feedUrl)
       })
     }

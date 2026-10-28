@@ -147,6 +147,13 @@ export interface Settings {
   browserHome: string
 }
 
+export interface TerminalShellInfo {
+  id: string
+  label: string
+  path: string
+  isDefault: boolean
+}
+
 export interface ToolCall {
   id: string
   name: string
