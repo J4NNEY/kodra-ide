@@ -489,6 +489,7 @@ textarea {
 .editor-region {
   flex: 1;
   min-width: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--canvas);

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import {
   AlertCircle,
   Bot,
+  Bug,
   CircleCheck,
   GitBranch,
   Lock,
@@ -14,6 +15,7 @@ import { call, isTauri } from '../lib/api'
 const ide = useIde()
 const git = useGit()
 const lsp = useLsp()
+const debug = useDebug()
 const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
 const info = useState<{ name: string; version: string; platform: string } | null>(
   'kudo:app-info',
@@ -62,7 +64,7 @@ onMounted(async () => {
   try {
     info.value = await call('app_info')
   } catch {
-    info.value = { name: 'Kudo', version: '0.5.0', platform: 'browser' }
+    info.value = { name: 'Kudo', version: '0.6.0', platform: 'browser' }
   }
 })
 </script>
@@ -96,6 +98,17 @@ onMounted(async () => {
     </span>
 
     <span class="spacer" />
+
+    <button
+      v-if="debug.active.value || debug.breakpoints.value.length"
+      class="status-item clickable"
+      :title="debug.summary.value || 'Run and Debug'"
+      @click="ide.sidebarView.value = 'debug'; ide.sidebarVisible.value = true"
+    >
+      <Bug :size="12" :style="{ color: debug.statusColor.value }" />
+      <span v-if="debug.active.value" class="debug-summary">{{ debug.summary.value }}</span>
+      <template v-else>{{ debug.breakpoints.value.length }} breakpoints</template>
+    </button>
 
     <button class="status-item clickable" title="Problems" @click="ide.togglePanel('problems')">
       <CircleCheck :size="12" style="color: var(--green)" />
@@ -133,7 +146,7 @@ onMounted(async () => {
 
     <span class="status-item" :title="isTauri() ? info?.platform : 'browser mock'">
       <span class="dot-live" :style="isTauri() ? '' : 'background: var(--orange); box-shadow: none'" />
-      {{ info?.name ?? 'Kudo' }} {{ info?.version ?? '0.5.0' }}
+      {{ info?.name ?? 'Kudo' }} {{ info?.version ?? '0.6.0' }}
     </span>
   </footer>
 </template>
@@ -152,6 +165,12 @@ onMounted(async () => {
   height: 6px;
   border-radius: 50%;
   background: var(--accent);
+}
+.debug-summary {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .spin {
   animation: spin 1s linear infinite;

@@ -7,6 +7,8 @@ export function useKeybindings() {
   const epoch = useTerminalEpoch()
   const browser = useBrowser()
   const database = useDatabase()
+  const debug = useDebug()
+  const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   let chord: string | null = null
   let chordTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -46,6 +48,29 @@ export function useKeybindings() {
   function onKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       closeOverlays()
+      return
+    }
+
+    // Debugger function keys work without a modifier, so they are handled
+    // before the Ctrl/Cmd gate below.
+    if (event.key === 'F5' || event.key === 'F9' || event.key === 'F10' || event.key === 'F11') {
+      if (ide.settingsOpen.value || ide.palette.value.mode !== 'none') {
+        return
+      }
+      event.preventDefault()
+      if (event.key === 'F5') {
+        if (event.shiftKey) void debug.stop()
+        else void debug.start()
+      } else if (event.key === 'F9') {
+        const path = ide.activePath.value
+        if (path) void debug.toggleBreakpoint(path, cursor.value.line)
+      } else if (event.key === 'F10') {
+        void debug.step('next')
+      } else if (event.shiftKey) {
+        void debug.step('stepOut')
+      } else {
+        void debug.step('stepIn')
+      }
       return
     }
 

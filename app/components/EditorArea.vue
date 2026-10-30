@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent, ref } from 'vue'
 import { FilePlus2, FolderOpen, History, Sparkles } from 'lucide-vue-next'
 
 const EditorPane = defineAsyncComponent(() => import('./EditorPane.vue'))
+const DebugToolbar = defineAsyncComponent(() => import('./DebugToolbar.vue'))
 const TerminalPanel = defineAsyncComponent(() => import('./TerminalPanel.vue'))
 
 const ide = useIde()
@@ -64,6 +65,7 @@ function startPanelDrag(event: PointerEvent) {
 
 <template>
   <main class="editor-region" :style="{ '--panel-h': `${panelHeight}px` }">
+    <DebugToolbar />
     <div v-if="!ide.tabs.value.length" class="editor-panes">
       <section class="editor-pane focused">
         <div class="editor-host">

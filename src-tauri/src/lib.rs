@@ -102,6 +102,12 @@ pub fn run() {
             commands::lsp::lsp_complete,
             commands::lsp::lsp_sessions,
             commands::lsp::lsp_detect,
+            // debug adapters
+            commands::dap::dap_start,
+            commands::dap::dap_request,
+            commands::dap::dap_stop,
+            commands::dap::dap_detect,
+            commands::dap::dap_sessions,
             // checkpoints
             commands::checkpoint::checkpoint_snapshot,
             commands::checkpoint::checkpoint_get,

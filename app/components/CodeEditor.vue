@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Compartment, EditorState } from '@codemirror/state'
+import { Compartment, EditorState, RangeSet, StateEffect, StateField } from '@codemirror/state'
 import {
+  Decoration,
   EditorView,
+  GutterMarker,
   drawSelection,
   dropCursor,
+  gutter,
   highlightActiveLine,
   highlightActiveLineGutter,
   highlightSpecialChars,
@@ -12,6 +15,7 @@ import {
   lineNumbers,
   rectangularSelection
 } from '@codemirror/view'
+import type { DecorationSet } from '@codemirror/view'
 import {
   defaultKeymap,
   history,
@@ -77,6 +81,105 @@ const wrapCompartment = new Compartment()
 const tabCompartment = new Compartment()
 const highlightCompartment = new Compartment()
 let syncTimer: ReturnType<typeof setTimeout> | null = null
+
+const debug = useDebug()
+
+/** A red dot rendered in the breakpoint gutter. */
+class BreakpointMarker extends GutterMarker {
+  override toDOM() {
+    const dot = document.createElement('span')
+    dot.className = 'cm-breakpoint-dot'
+    return dot
+  }
+}
+
+const breakpointMarker = new BreakpointMarker()
+const setBreakpointLines = StateEffect.define<number[]>()
+const setPausedLine = StateEffect.define<number | null>()
+
+const breakpointField = StateField.define<RangeSet<GutterMarker>>({
+  create: () => RangeSet.empty,
+  update(value, tr) {
+    let next = value.map(tr.changes)
+    for (const effect of tr.effects) {
+      if (!effect.is(setBreakpointLines)) continue
+      const marks = [...new Set(effect.value)]
+        .filter((line) => line >= 1 && line <= tr.state.doc.lines)
+        .sort((a, b) => a - b)
+        .map((line) => breakpointMarker.range(tr.state.doc.line(line).from))
+      next = RangeSet.of(marks, true)
+    }
+    return next
+  }
+})
+
+const pausedLineDecoration = Decoration.line({ class: 'cm-debug-line' })
+
+const pausedLineField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, tr) {
+    let next = value.map(tr.changes)
+    for (const effect of tr.effects) {
+      if (!effect.is(setPausedLine)) continue
+      const line = effect.value
+      next =
+        line && line >= 1 && line <= tr.state.doc.lines
+          ? Decoration.set([pausedLineDecoration.range(tr.state.doc.line(line).from)])
+          : Decoration.none
+    }
+    return next
+  },
+  provide: (field) => EditorView.decorations.from(field)
+})
+
+const breakpointGutter = gutter({
+  class: 'cm-breakpoint-gutter',
+  markers: (editor) => editor.state.field(breakpointField),
+  initialSpacer: () => breakpointMarker,
+  domEventHandlers: {
+    mousedown(editor, block) {
+      const line = editor.state.doc.lineAt(block.from).number
+      void debug.toggleBreakpoint(props.tab.path, line)
+      return true
+    }
+  }
+})
+
+function samePath(a: string, b: string) {
+  return a.replace(/\\/g, '/').toLowerCase() === b.replace(/\\/g, '/').toLowerCase()
+}
+
+function breakpointLines() {
+  return debug
+    .breakpointsFor(props.tab.path)
+    .filter((bp) => bp.enabled)
+    .map((bp) => bp.line)
+}
+
+function pausedLineFor(): number | null {
+  if (debug.status.value !== 'paused') return null
+  const frame = debug.frames.value.find((item) => item.path && samePath(item.path, props.tab.path))
+  return frame?.line ?? null
+}
+
+let lastPausedLine: number | null = null
+
+function syncBreakpointMarkers() {
+  if (!view) return
+  view.dispatch({ effects: setBreakpointLines.of(breakpointLines()) })
+}
+
+function syncPausedLine() {
+  if (!view) return
+  const line = pausedLineFor()
+  view.dispatch({ effects: setPausedLine.of(line) })
+  const focused = !props.groupId || ide.activeGroupId.value === props.groupId
+  if (line && line !== lastPausedLine && focused) {
+    const target = view.state.doc.line(Math.min(line, view.state.doc.lines))
+    view.dispatch({ effects: EditorView.scrollIntoView(target.from, { y: 'center' }) })
+  }
+  lastPausedLine = line
+}
 
 const syntaxTags: Record<SyntaxKey, Tag[]> = {
   keyword: [t.keyword, t.modifier, t.controlKeyword, t.operatorKeyword, t.self],
@@ -173,6 +276,24 @@ const theme = EditorView.theme(
     '.cm-gutters': { backgroundColor: 'transparent', border: 'none' },
     '.cm-lineNumbers .cm-gutterElement': { padding: '0 10px 0 14px', minWidth: '44px' },
     '.cm-foldGutter .cm-gutterElement': { padding: '0 4px' },
+    '.cm-breakpoint-gutter': { width: '18px', cursor: 'pointer' },
+    '.cm-breakpoint-gutter .cm-gutterElement': {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '0 2px'
+    },
+    '.cm-breakpoint-dot': {
+      width: '9px',
+      height: '9px',
+      borderRadius: '50%',
+      background: 'var(--danger, #f87171)',
+      boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.25)'
+    },
+    '.cm-debug-line': {
+      backgroundColor: 'rgba(212, 167, 60, 0.14)',
+      boxShadow: 'inset 2px 0 0 var(--warning, #d4a73c)'
+    },
     '.cm-tooltip': {
       backgroundColor: 'var(--surface-2)',
       border: '1px solid var(--border-strong)',
@@ -306,6 +427,9 @@ onMounted(() => {
     state: EditorState.create({
       doc: props.tab.content,
       extensions: [
+        breakpointField,
+        pausedLineField,
+        breakpointGutter,
         lineNumbers(),
         highlightActiveLineGutter(),
         highlightSpecialChars(),
@@ -364,6 +488,8 @@ onMounted(() => {
 
   view.scrollDOM.scrollTop = props.tab.scrollTop ?? 0
   reportCursor(view.state)
+  syncBreakpointMarkers()
+  syncPausedLine()
   if (props.gotoLine) jumpTo(props.gotoLine)
   if (!props.groupId || ide.activeGroupId.value === props.groupId) view.focus()
   if (!props.tab.binary) {
@@ -427,6 +553,9 @@ watch(
   () => props.gotoLine,
   (line) => jumpTo(line)
 )
+
+watch(() => debug.breakpoints.value, syncBreakpointMarkers)
+watch([debug.status, debug.frames], syncPausedLine)
 
 defineExpose({ focus: () => view?.focus() })
 </script>

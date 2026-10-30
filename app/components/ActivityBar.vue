@@ -3,6 +3,7 @@ import {
   Files,
   Search,
   GitBranch,
+  Bug,
   Bot,
   Database,
   Settings2,
@@ -22,6 +23,7 @@ const items: { id: SidebarView; icon: any; label: string; badge?: boolean }[] = 
   { id: 'explorer', icon: Files, label: 'Explorer' },
   { id: 'search', icon: Search, label: 'Search' },
   { id: 'git', icon: GitBranch, label: 'Source Control', badge: true },
+  { id: 'debug', icon: Bug, label: 'Run and Debug' },
   { id: 'agent', icon: Bot, label: 'Agent' }
 ]
 

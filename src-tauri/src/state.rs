@@ -184,6 +184,25 @@ pub struct LspSession {
     pub root_uri: Option<String>,
 }
 
+pub struct DapSession {
+    /// Kept alive so the adapter is killed when the session is dropped.
+    pub child: tokio::sync::Mutex<tokio::process::Child>,
+    /// stdio adapters write to the child's stdin; TCP adapters write to the socket.
+    pub writer: tokio::sync::Mutex<Box<dyn tokio::io::AsyncWrite + Send + Unpin>>,
+    pub pending:
+        Mutex<HashMap<i64, tokio::sync::oneshot::Sender<Result<serde_json::Value, String>>>>,
+    pub next_id: std::sync::atomic::AtomicI64,
+    /// DAP numbers every message; the counter is bumped inside the write lock.
+    pub seq: std::sync::atomic::AtomicI64,
+    pub timeout_secs: u64,
+    pub name: String,
+    pub adapter: String,
+    /// Launch working directory, used to clean up adapter build artifacts.
+    pub cwd: Option<String>,
+    /// Attach sessions detach on stop instead of terminating the target.
+    pub attach: bool,
+}
+
 #[derive(Default)]
 pub struct AppState {
     pub workspace: RwLock<Option<PathBuf>>,
@@ -194,6 +213,7 @@ pub struct AppState {
     pub dbs: Mutex<HashMap<String, DbSession>>,
     pub mcp: tokio::sync::Mutex<HashMap<String, McpSession>>,
     pub lsp: tokio::sync::Mutex<HashMap<String, Arc<LspSession>>>,
+    pub dap: tokio::sync::Mutex<HashMap<String, Arc<DapSession>>>,
     pub netlog: Mutex<Vec<crate::commands::netlog::NetEntry>>,
     pub net_seq: std::sync::atomic::AtomicU64,
 }

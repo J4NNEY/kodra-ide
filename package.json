@@ -1,7 +1,7 @@
 {
   "name": "kudo",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "description": "Kudo — a clean-room desktop IDE (Sokudo-inspired) built with Tauri v2 + Nuxt 3",
   "scripts": {

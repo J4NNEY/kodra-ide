@@ -20,6 +20,8 @@ export function useCommands() {
   const epoch = useTerminalEpoch()
   const browser = useBrowser()
   const database = useDatabase()
+  const debug = useDebug()
+  const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   const extensions = useExtensions()
   const themes = useThemes()
 
@@ -86,6 +88,13 @@ export function useCommands() {
       group: 'View',
       hint: 'Ctrl+Shift+G',
       run: () => (ide.sidebarView.value = 'git', (ide.sidebarVisible.value = true))
+    },
+    {
+      id: 'view.debug',
+      label: 'View: Run and Debug',
+      group: 'View',
+      hint: 'F5',
+      run: () => (ide.sidebarView.value = 'debug', (ide.sidebarVisible.value = true))
     },
     {
       id: 'view.agent',
@@ -213,6 +222,69 @@ export function useCommands() {
         next.accent = target.colors.accent
         ide.saveSettings(next)
       }
+    },
+    {
+      id: 'debug.start',
+      label: 'Debug: Start / Continue',
+      group: 'Debug',
+      hint: 'F5',
+      run: () => debug.start()
+    },
+    {
+      id: 'debug.stop',
+      label: 'Debug: Stop',
+      group: 'Debug',
+      hint: 'Shift+F5',
+      run: () => debug.stop()
+    },
+    {
+      id: 'debug.pause',
+      label: 'Debug: Pause',
+      group: 'Debug',
+      run: () => debug.pause()
+    },
+    {
+      id: 'debug.restart',
+      label: 'Debug: Restart',
+      group: 'Debug',
+      run: () => debug.restart()
+    },
+    {
+      id: 'debug.step-over',
+      label: 'Debug: Step Over',
+      group: 'Debug',
+      hint: 'F10',
+      run: () => debug.step('next')
+    },
+    {
+      id: 'debug.step-into',
+      label: 'Debug: Step Into',
+      group: 'Debug',
+      hint: 'F11',
+      run: () => debug.step('stepIn')
+    },
+    {
+      id: 'debug.step-out',
+      label: 'Debug: Step Out',
+      group: 'Debug',
+      hint: 'Shift+F11',
+      run: () => debug.step('stepOut')
+    },
+    {
+      id: 'debug.toggle-breakpoint',
+      label: 'Debug: Toggle Breakpoint',
+      group: 'Debug',
+      hint: 'F9',
+      run: () => {
+        const path = ide.activePath.value
+        if (path) void debug.toggleBreakpoint(path, cursor.value.line)
+      }
+    },
+    {
+      id: 'debug.clear-breakpoints',
+      label: 'Debug: Remove All Breakpoints',
+      group: 'Debug',
+      run: () => debug.clearBreakpoints()
     },
     {
       id: 'terminal.new',

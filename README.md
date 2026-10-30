@@ -21,6 +21,7 @@ public screenshots and the UI is written from scratch.
 | Browser | In-app preview overlay, address bar, request inspector run in Rust (no CORS), open in system browser |
 | MCP | stdio JSON-RPC client, server presets, connect/disconnect, tool list and a tool runner |
 | LSP | Language servers on PATH (rust-analyzer, gopls, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion, hover docs, go-to-definition (`F12`/`Ctrl+click`), diagnostics as squiggles plus a Problems panel and status-bar counts |
+| Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |
 | Docker | Containers/images tabs, start/stop/restart, logs, run image |
 | Network | Live request log (AI calls, browser fetches, update checks) in the bottom panel |
 | Updater | Feed check, download to temp, launch installer, reveal in Explorer (see `docs/updater.md`) |
@@ -50,6 +51,10 @@ Language servers are discovered from `PATH`; install the one for your language
 `go install golang.org/x/tools/gopls@latest`). `Settings → Editor → Language servers` lists
 what was found and lets you disable a server for the session.
 
+Debug adapters are discovered the same way. Install Delve with
+`go install github.com/go-delve/delve/cmd/dlv@latest`, or put `codelldb` / `lldb-dap` on `PATH`;
+`Settings` lists what was detected and the Debug pane lets you override the command.
+
 `pnpm dev` runs entirely in the browser: `app/lib/mock.ts` provides a virtual workspace and canned
 responses for every backend command, so the UI can be developed without the Tauri shell.
 
@@ -65,7 +70,7 @@ app/
   composables/            useIde, useChat, useGit, useDatabase, useMcp, useBrowser, ...
   lib/                    typed IPC bridge (api.ts), mock backend, markdown, types
 src-tauri/
-  src/commands/           one module per feature area (pty, workspace, git, ai, db, mcp, lsp, docker, ...)
+  src/commands/           one module per feature area (pty, workspace, git, ai, db, mcp, lsp, dap, docker, ...)
   src/state.rs            AppState, persisted Settings, session structs
   src/util.rs             workspace path resolution/sandboxing helpers
 ```
@@ -73,7 +78,7 @@ src-tauri/
 ## Backend command groups
 
 `workspace` · `pty` · `exec` · `git` · `ai` · `checkpoint` · `settings` · `db` · `browser` · `mcp` · `lsp` ·
-`docker` · `skills` · `extensions` · `updater` · `netlog`. All commands are registered in
+`dap` · `docker` · `skills` · `extensions` · `updater` · `netlog`. All commands are registered in
 `src-tauri/src/lib.rs`.
 
 ## Agent safety model
@@ -115,6 +120,37 @@ remembered across restarts.
 `Ctrl+\` again (or the pane toolbar button) merges the side pane back into the main pane without
 losing its tabs. The palette adds **View: Split Editor**, **View: Close Split** and **View: Move
 Editor to Other Pane**. Layout and both tab strips are restored with the session.
+
+## Debugger
+
+The **Run and Debug** view (`F5`) speaks the Debug Adapter Protocol to a stdio adapter. Delve is the
+default for Go (`dlv dap`), with CodeLLDB, `lldb-dap` and a **custom** adapter (raw launch JSON) for
+anything else. Adapters are detected on `PATH`; the pane shows the detected path and lets you point
+at a different command. Program, arguments, working directory, stop-on-entry and launch/attach are
+saved per workspace in `localStorage`. **Attach** reads the process id from the Program field — Delve
+gets `{ mode: "local", processId }`, the native adapters get `{ pid }` — and Kudo refuses a
+non-numeric PID before creating a session. Stopping an attach session asks the adapter to detach
+instead of terminating the target; adapters still decide the outcome (Delve on Windows ends the
+process it is attached to).
+
+- **Breakpoints** — click the gutter or press `F9`; the dot turns hollow until the adapter verifies
+  it. The pane lists every breakpoint with enable/disable, a condition (`i == 3`) and remove.
+- **Stopping** — the pane and the floating editor toolbar show the reason and the top frame; the
+  paused line is highlighted and scrolled into view. `F10` steps over, `F11` into, `Shift+F11` out,
+  `F5` continues, `Shift+F5` stops, and **Restart** relaunches the session.
+- **Inspection** — call stack frames open their file at the right line, scopes expand lazily through
+  `variablesReference`, and watch expressions are evaluated in the selected frame with `evaluate`.
+- **Console** — adapter output (`output` events and stderr) and lifecycle messages land in the
+  Debug Console with stderr highlighted.
+- **Commands** — the palette adds `Debug: Start / Continue`, `Stop`, `Pause`, `Restart`, `Step
+  Over`, `Step Into`, `Step Out`, `Toggle Breakpoint` and `Remove All Breakpoints`.
+
+The Rust side (`src-tauri/src/commands/dap.rs`) speaks DAP over stdio for CodeLLDB and `lldb-dap`, and
+over TCP for Delve, which prints `DAP server listening at: 127.0.0.1:<port>` instead of using stdio.
+It frames messages, correlates responses by sequence, forwards every event as `dap:event`, answers
+reverse requests such as `runInTerminal` with a refusal so the adapter falls back to its own console,
+relays the Go debuggee's stdout into the Debug Console, and kills the adapter when the session is
+stopped or the workspace changes.
 
 ## Terminals
 

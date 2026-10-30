@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.6.0 — 2026-10-29
+
+Kudo can now debug programs through the Debug Adapter Protocol.
+
+- **Debug view** — a new **Run and Debug** activity (`F5`, palette `View: Run and Debug`) with launch
+  configurations for Delve (`dlv dap`), CodeLLDB, `lldb-dap` and a custom stdio adapter that takes
+  raw launch JSON. Program, arguments, working directory, launch/attach and stop-on-entry persist per
+  workspace; detected adapters are listed with their `PATH` location. Attach mode takes the process
+  id from the Program field, validates it before starting and asks the adapter to detach on stop.
+- **Breakpoints in the gutter** — click next to a line or press `F9` to toggle. Dots are hollow until
+  the adapter verifies them; the pane can disable, remove, clear or attach a condition to any
+  breakpoint, and breakpoints survive restarts with the workspace.
+- **Paused state** — the highlighted line scrolls into view, a floating toolbar shows the current
+  frame, and the call stack, scopes and variables are loaded from the adapter. Scopes and compound
+  values expand lazily.
+- **Actions** — `F5` continue, `Shift+F5` stop, `F10` step over, `F11` step into, `Shift+F11` step
+  out, plus pause and restart from the toolbar, pane and palette.
+- **Watch and console** — expressions are evaluated in the selected frame; adapter output and stderr
+  are streamed into the Debug Console.
+- **Transport** — DAP is framed over the adapter's stdin/stdout (CodeLLDB, `lldb-dap`, custom) or,
+  for Delve, over the TCP socket announced on stdout by `dlv dap`. Responses are correlated by
+  sequence, events are forwarded as `dap:event`, `runInTerminal` is refused so adapters use their own
+  console, the Go debuggee's stdout is relayed into the Debug Console, and the adapter is killed on
+  stop or workspace switch (Delve's debug binaries are cleaned up with it).
+
 ## 0.5.0 — 2026-10-28
 
 Editors can now be split into two panes.

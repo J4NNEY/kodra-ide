@@ -14,3 +14,4 @@ pub mod settings;
 pub mod skills;
 pub mod updater;
 pub mod workspace;
+pub mod dap;

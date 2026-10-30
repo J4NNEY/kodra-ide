@@ -624,7 +624,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'app_info':
       return ok({
         name: 'Kudo',
-        version: '0.5.0',
+        version: '0.6.0',
         platform: 'browser-mock',
         arch: 'wasm',
         configDir: 'localStorage'
@@ -647,6 +647,12 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
       return ok(0)
     case 'pty_is_running':
       return ok(false)
+    case 'dap_detect':
+      return ok({})
+    case 'dap_start':
+    case 'dap_request':
+    case 'dap_stop':
+      return ok(undefined)
     case 'terminal_shells': {
       const configured = loadSettings().terminalShell
       const configuredName = configured
@@ -858,12 +864,12 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
         throw new Error('Set an update feed URL in Settings → About first')
       }
       return ok({
-        currentVersion: '0.5.0',
-        latestVersion: '0.5.0',
+        currentVersion: '0.6.0',
+        latestVersion: '0.6.0',
         available: true,
-        notes: '## Kudo 0.5.0\n\n- Split editor panes with independent tabs\n- Drag tabs between panes and resize the divider\n',
-        publishedAt: '2026-10-20T00:00:00Z',
-        url: 'https://example.com/kudo_0.5.0_x64-setup.exe',
+        notes: '## Kudo 0.6.0\n\n- Debugger panel speaking DAP to Delve, CodeLLDB and lldb-dap\n- Breakpoint gutter, call stack, variables and step controls\n',
+        publishedAt: '2026-10-29T00:00:00Z',
+        url: 'https://example.com/kudo_0.6.0_x64-setup.exe',
         feed: String(args.feedUrl)
       })
     }
