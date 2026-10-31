@@ -8,6 +8,7 @@ export function useKeybindings() {
   const browser = useBrowser()
   const database = useDatabase()
   const debug = useDebug()
+  const tests = useTests()
   const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   let chord: string | null = null
   let chordTimer: ReturnType<typeof setTimeout> | null = null
@@ -125,6 +126,14 @@ export function useKeybindings() {
     if (key === 'p') {
       event.preventDefault()
       ide.palette.value = { mode: shift ? 'commands' : 'files' }
+      return
+    }
+
+    if (shift && key === 'r') {
+      event.preventDefault()
+      ide.panelTab.value = 'tests'
+      ide.panelVisible.value = true
+      void tests.runAll()
       return
     }
 

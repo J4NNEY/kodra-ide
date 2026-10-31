@@ -193,6 +193,7 @@ export type SidebarView =
   | 'search'
   | 'git'
   | 'debug'
+  | 'tests'
   | 'agent'
   | 'database'
   | 'skills'

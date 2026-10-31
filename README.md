@@ -22,6 +22,7 @@ public screenshots and the UI is written from scratch.
 | MCP | stdio JSON-RPC client, server presets, connect/disconnect, tool list and a tool runner |
 | LSP | Language servers on PATH (rust-analyzer, gopls, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion, hover docs, go-to-definition (`F12`/`Ctrl+click`), diagnostics as squiggles plus a Problems panel and status-bar counts |
 | Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |
+| Tests | Test explorer for Go, Rust, Python and Node: auto-detection, framework groups, per-test status, run all/file/test, streamed output with command header, cancel, and gutter markers that run a test on click |
 | Docker | Containers/images tabs, start/stop/restart, logs, run image |
 | Network | Live request log (AI calls, browser fetches, update checks) in the bottom panel |
 | Updater | Feed check, download to temp, launch installer, reveal in Explorer (see `docs/updater.md`) |
@@ -151,6 +152,32 @@ It frames messages, correlates responses by sequence, forwards every event as `d
 reverse requests such as `runInTerminal` with a refusal so the adapter falls back to its own console,
 relays the Go debuggee's stdout into the Debug Console, and kills the adapter when the session is
 stopped or the workspace changes.
+
+## Tests
+
+The **Tests** view auto-detects test files after a workspace opens and groups them by framework and
+package: Go (`func TestXxx`), Rust (`#[test]` / `#[tokio::test]`), Python (`test_*.py` and
+`def test_*`) and Node (`*.test.*` / `*.spec.*`). Each file expands to its tests, and the row shows a
+running, passed or failed marker as results stream in.
+
+- **Run** — the header runs every detected package, the file row runs one file, and the play button
+  on a test row runs only that test. `Ctrl+Shift+R` runs everything; while a run is active the button
+  becomes **Cancel**, which kills the whole process tree.
+- **Output** — the bottom panel's **Tests** tab shows the exact command, its working directory and
+  the runner's own verbose output. The header chip reports `All tests passed`, `N test(s) failed`,
+  `Test run cancelled` or `Running tests…` plus the duration, and the status bar mirrors it.
+- **Gutter** — detected tests get a small dot in the editor next to the breakpoints; click it to run
+  that test. The dot turns green, red or amber with the latest status.
+- **Commands** — the palette adds `Test: Show Test Explorer`, `Run All Tests`, `Run Tests in Active
+  File`, `Cancel Test Run` and `Refresh Test Explorer`.
+
+Runs are planned in Rust (`src-tauri/src/commands/tests.rs`) and executed one request at a time, so
+a run-all is a queue of package runs rather than a single shell. Go uses `go test -v -count=1` with
+`./...` for a package and `. -run ^Name$` for a single test, Rust uses `cargo test --color never`
+(plus `-- --exact` when filtering), Python uses `python -m pytest -v`, and Node uses the package
+manager's `test` script, forwarding a file path only when a Jest or Vitest config exists. A missing
+runner is reported in the pane before anything is spawned. Output is capped and a workspace switch
+stops any run in flight.
 
 ## Terminals
 

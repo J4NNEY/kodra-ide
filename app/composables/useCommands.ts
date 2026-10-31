@@ -21,6 +21,7 @@ export function useCommands() {
   const browser = useBrowser()
   const database = useDatabase()
   const debug = useDebug()
+  const tests = useTests()
   const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   const extensions = useExtensions()
   const themes = useThemes()
@@ -285,6 +286,54 @@ export function useCommands() {
       label: 'Debug: Remove All Breakpoints',
       group: 'Debug',
       run: () => debug.clearBreakpoints()
+    },
+    {
+      id: 'tests.show',
+      label: 'Test: Show Test Explorer',
+      group: 'Test',
+      run: () => {
+        ide.sidebarView.value = 'tests'
+        ide.sidebarVisible.value = true
+      }
+    },
+    {
+      id: 'tests.run-all',
+      label: 'Test: Run All Tests',
+      group: 'Test',
+      hint: 'Ctrl+Shift+R',
+      run: () => {
+        ide.panelTab.value = 'tests'
+        ide.panelVisible.value = true
+        return tests.runAll()
+      }
+    },
+    {
+      id: 'tests.run-file',
+      label: 'Test: Run Tests in Active File',
+      group: 'Test',
+      run: () => {
+        const path = ide.activePath.value
+        const file = path ? tests.fileFor(path) : null
+        if (!file) {
+          ide.notify('No tests detected in this file')
+          return
+        }
+        ide.panelTab.value = 'tests'
+        ide.panelVisible.value = true
+        return tests.runFile(file)
+      }
+    },
+    {
+      id: 'tests.cancel',
+      label: 'Test: Cancel Test Run',
+      group: 'Test',
+      run: () => tests.cancel()
+    },
+    {
+      id: 'tests.refresh',
+      label: 'Test: Refresh Test Explorer',
+      group: 'Test',
+      run: () => tests.detect()
     },
     {
       id: 'terminal.new',

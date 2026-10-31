@@ -16,6 +16,7 @@ const ExtensionsPane = defineAsyncComponent(() => import('./ExtensionsPane.vue')
     <SearchPane v-else-if="ide.sidebarView.value === 'search'" />
     <GitPane v-else-if="ide.sidebarView.value === 'git'" />
     <DebugPane v-else-if="ide.sidebarView.value === 'debug'" />
+    <TestPane v-else-if="ide.sidebarView.value === 'tests'" />
     <AgentPane v-else-if="ide.sidebarView.value === 'agent'" />
     <DatabasePane v-else-if="ide.sidebarView.value === 'database'" />
     <SkillsPane v-else-if="ide.sidebarView.value === 'skills'" />

@@ -108,6 +108,12 @@ pub fn run() {
             commands::dap::dap_stop,
             commands::dap::dap_detect,
             commands::dap::dap_sessions,
+            // test runner
+            commands::tests::tests_detect,
+            commands::tests::test_run,
+            commands::tests::test_cancel,
+            commands::tests::test_cancel_all,
+            commands::tests::tests_toolchain,
             // checkpoints
             commands::checkpoint::checkpoint_snapshot,
             commands::checkpoint::checkpoint_get,

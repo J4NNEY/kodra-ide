@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.7.0 — 2026-10-31
+
+Kudo can now discover and run the workspace's tests.
+
+- **Test explorer** — a new **Tests** activity lists detected test files by framework and package:
+  Go (`func TestXxx`), Rust (`#[test]` / `#[tokio::test]`), Python (`test_*.py`, `def test_*`) and
+  Node (`*.test.*` / `*.spec.*`). Files expand into individual tests, and every row shows its latest
+  status while a run streams in. The pane warns when the matching runner is not installed and can
+  refresh detection on demand.
+- **Runs** — run every package, a whole file, or one test. The header button turns into **Cancel**
+  during a run and kills the entire process tree. Run-all executes one request per package,
+  sequentially, so output stays attributable.
+- **Output panel** — the **Tests** tab prints the exact command and working directory before the
+  runner's verbose output. The chip reports `All tests passed`, `N test(s) failed`,
+  `Test run cancelled` or `Running tests…` with the duration, and the status bar carries the same
+  state. Output is capped and clears per run.
+- **Gutter markers** — detected test lines get a dot in a dedicated gutter next to the breakpoints.
+  Clicking a dot runs that single test and the dot is coloured by its status (green, red, amber).
+- **Commands** — `Test: Show Test Explorer`, `Run All Tests` (`Ctrl+Shift+R`), `Run Tests in Active
+  File`, `Cancel Test Run` and `Refresh Test Explorer`.
+- **Runners** — `go test -v -count=1` (`./...` per package, `. -run ^Name$` for one test),
+  `cargo test --color never` (`-- --exact` when filtered), `python -m pytest -v`, and the package
+  manager's `test` script for Node, which only forwards a file path when a Jest or Vitest config
+  exists. Runners are looked up on `PATH` in Rust and spawned with a tree-killing cancel path.
+
 ## 0.6.0 — 2026-10-29
 
 Kudo can now debug programs through the Debug Adapter Protocol.

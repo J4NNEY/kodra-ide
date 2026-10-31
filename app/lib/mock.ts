@@ -624,7 +624,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'app_info':
       return ok({
         name: 'Kudo',
-        version: '0.6.0',
+        version: '0.7.0',
         platform: 'browser-mock',
         arch: 'wasm',
         configDir: 'localStorage'
@@ -653,6 +653,37 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'dap_request':
     case 'dap_stop':
       return ok(undefined)
+    case 'tests_detect':
+      return ok([
+        {
+          path: 'C:\\demo\\kudo-workspace\\lib\\strutil_test.go',
+          rel: 'lib/strutil_test.go',
+          framework: 'go',
+          package: 'lib',
+          tests: [
+            { name: 'TestTrim', line: 14 },
+            { name: 'TestSplit', line: 26 }
+          ]
+        },
+        {
+          path: 'C:\\demo\\kudo-workspace\\app\\test_models.py',
+          rel: 'app/test_models.py',
+          framework: 'python',
+          package: 'app',
+          tests: [
+            { name: 'test_create', line: 9 },
+            { name: 'test_update', line: 17 }
+          ]
+        }
+      ])
+    case 'tests_toolchain':
+      return ok({ go: 'C:\\Program Files\\Go\\bin\\go.exe', python: 'C:\\Python313\\python.exe' })
+    case 'test_run':
+      return ok({ id: 'mock-run', label: 'go test -v -count=1 ./...', cwd: 'C:\\demo\\kudo-workspace' })
+    case 'test_cancel':
+      return ok(true)
+    case 'test_cancel_all':
+      return ok(0)
     case 'terminal_shells': {
       const configured = loadSettings().terminalShell
       const configuredName = configured
@@ -864,12 +895,12 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
         throw new Error('Set an update feed URL in Settings → About first')
       }
       return ok({
-        currentVersion: '0.6.0',
-        latestVersion: '0.6.0',
+        currentVersion: '0.7.0',
+        latestVersion: '0.7.0',
         available: true,
-        notes: '## Kudo 0.6.0\n\n- Debugger panel speaking DAP to Delve, CodeLLDB and lldb-dap\n- Breakpoint gutter, call stack, variables and step controls\n',
-        publishedAt: '2026-10-29T00:00:00Z',
-        url: 'https://example.com/kudo_0.6.0_x64-setup.exe',
+        notes: '## Kudo 0.7.0\n\n- Test explorer for Go, Rust, Python and Node projects\n- Run a file or a single test, stream output, cancel a run\n- Per-test status in the sidebar and the editor gutter\n',
+        publishedAt: '2026-10-30T00:00:00Z',
+        url: 'https://example.com/kudo_0.7.0_x64-setup.exe',
         feed: String(args.feedUrl)
       })
     }

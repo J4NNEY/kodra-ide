@@ -214,6 +214,8 @@ pub struct AppState {
     pub mcp: tokio::sync::Mutex<HashMap<String, McpSession>>,
     pub lsp: tokio::sync::Mutex<HashMap<String, Arc<LspSession>>>,
     pub dap: tokio::sync::Mutex<HashMap<String, Arc<DapSession>>>,
+    /// Running test processes keyed by run id (pid is used for `taskkill /T`).
+    pub test_runs: Mutex<HashMap<String, u32>>,
     pub netlog: Mutex<Vec<crate::commands::netlog::NetEntry>>,
     pub net_seq: std::sync::atomic::AtomicU64,
 }

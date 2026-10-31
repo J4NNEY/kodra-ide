@@ -83,6 +83,7 @@ const highlightCompartment = new Compartment()
 let syncTimer: ReturnType<typeof setTimeout> | null = null
 
 const debug = useDebug()
+const tests = useTests()
 
 /** A red dot rendered in the breakpoint gutter. */
 class BreakpointMarker extends GutterMarker {
@@ -93,9 +94,54 @@ class BreakpointMarker extends GutterMarker {
   }
 }
 
+/** A small dot rendered in the test gutter, colored by test status. */
+class TestMarker extends GutterMarker {
+  constructor(public status: string) {
+    super()
+  }
+  override toDOM() {
+    const dot = document.createElement('span')
+    dot.className = `cm-test-dot cm-test-${this.status}`
+    dot.title = this.status
+    return dot
+  }
+}
+
 const breakpointMarker = new BreakpointMarker()
-const setBreakpointLines = StateEffect.define<number[]>()
+const testMarker = new TestMarker('idle')
+const setTestLines = StateEffect.define<{ line: number; status: string }[]>()
+const testField = StateField.define<RangeSet<GutterMarker>>({
+  create: () => RangeSet.empty,
+  update(value, tr) {
+    let next = value.map(tr.changes)
+    for (const effect of tr.effects) {
+      if (!effect.is(setTestLines)) continue
+      const marks = effect.value
+        .filter((m) => m.line >= 1 && m.line <= tr.state.doc.lines)
+        .sort((a, b) => a.line - b.line)
+        .map((m) => new TestMarker(m.status).range(tr.state.doc.line(m.line).from))
+      next = RangeSet.of(marks, true)
+    }
+    return next
+  }
+})
+
+const testGutter = gutter({
+  class: 'cm-test-gutter',
+  markers: (editor) => editor.state.field(testField),
+  initialSpacer: () => testMarker,
+  domEventHandlers: {
+    mousedown(editor, block) {
+      const line = editor.state.doc.lineAt(block.from).number
+      const file = tests.fileFor(props.tab.path)
+      const name = file ? tests.testAt(file.rel, line) : null
+      if (name && file) void tests.runTest(file, name)
+      return true
+    }
+  }
+})
 const setPausedLine = StateEffect.define<number | null>()
+const setBreakpointLines = StateEffect.define<number[]>()
 
 const breakpointField = StateField.define<RangeSet<GutterMarker>>({
   create: () => RangeSet.empty,
@@ -167,6 +213,20 @@ let lastPausedLine: number | null = null
 function syncBreakpointMarkers() {
   if (!view) return
   view.dispatch({ effects: setBreakpointLines.of(breakpointLines()) })
+}
+
+function syncTestMarkers() {
+  if (!view) return
+  const file = tests.fileFor(props.tab.path)
+  if (!file || file.tests.length === 0) {
+    view.dispatch({ effects: setTestLines.of([]) })
+    return
+  }
+  const marks = file.tests.map((t) => ({
+    line: t.line,
+    status: tests.statusOf(file, t.name)
+  }))
+  view.dispatch({ effects: setTestLines.of(marks) })
 }
 
 function syncPausedLine() {
@@ -289,6 +349,36 @@ const theme = EditorView.theme(
       borderRadius: '50%',
       background: 'var(--danger, #f87171)',
       boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.25)'
+    },
+    '.cm-test-gutter': { cursor: 'pointer' },
+    '.cm-test-gutter .cm-gutterElement': {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '0 2px'
+    },
+    '.cm-test-dot': {
+      width: '7px',
+      height: '7px',
+      borderRadius: '50%',
+      border: '1px solid var(--text-faint)',
+      background: 'transparent',
+      opacity: 0.7
+    },
+    '.cm-test-dot.cm-test-passed': {
+      background: 'var(--success, #4ec9b0)',
+      borderColor: 'var(--success, #4ec9b0)',
+      opacity: 1
+    },
+    '.cm-test-dot.cm-test-failed': {
+      background: 'var(--danger, #f87171)',
+      borderColor: 'var(--danger, #f87171)',
+      opacity: 1
+    },
+    '.cm-test-dot.cm-test-running': {
+      background: 'var(--warning, #d4a73c)',
+      borderColor: 'var(--warning, #d4a73c)',
+      opacity: 1
     },
     '.cm-debug-line': {
       backgroundColor: 'rgba(212, 167, 60, 0.14)',
@@ -430,6 +520,8 @@ onMounted(() => {
         breakpointField,
         pausedLineField,
         breakpointGutter,
+        testField,
+        testGutter,
         lineNumbers(),
         highlightActiveLineGutter(),
         highlightSpecialChars(),
@@ -489,6 +581,7 @@ onMounted(() => {
   view.scrollDOM.scrollTop = props.tab.scrollTop ?? 0
   reportCursor(view.state)
   syncBreakpointMarkers()
+  syncTestMarkers()
   syncPausedLine()
   if (props.gotoLine) jumpTo(props.gotoLine)
   if (!props.groupId || ide.activeGroupId.value === props.groupId) view.focus()
@@ -555,6 +648,8 @@ watch(
 )
 
 watch(() => debug.breakpoints.value, syncBreakpointMarkers)
+watch(tests.results, syncTestMarkers)
+watch(tests.files, syncTestMarkers)
 watch([debug.status, debug.frames], syncPausedLine)
 
 defineExpose({ focus: () => view?.focus() })
