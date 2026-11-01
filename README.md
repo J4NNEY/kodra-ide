@@ -23,6 +23,7 @@ public screenshots and the UI is written from scratch.
 | LSP | Language servers on PATH (rust-analyzer, gopls, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion, hover docs, go-to-definition (`F12`/`Ctrl+click`), diagnostics as squiggles plus a Problems panel and status-bar counts |
 | Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |
 | Tests | Test explorer for Go, Rust, Python and Node: auto-detection, framework groups, per-test status, run all/file/test, streamed output with command header, cancel, and gutter markers that run a test on click |
+| Tasks | Build/run task runner: `.kudo/tasks.json`, `package.json` scripts (nested, package-manager aware) and `Makefile` targets, default build task plus `Ctrl+Alt+B`, streamed output in the bottom panel, stop, per-row status |
 | Docker | Containers/images tabs, start/stop/restart, logs, run image |
 | Network | Live request log (AI calls, browser fetches, update checks) in the bottom panel |
 | Updater | Feed check, download to temp, launch installer, reveal in Explorer (see `docs/updater.md`) |
@@ -79,8 +80,8 @@ src-tauri/
 ## Backend command groups
 
 `workspace` · `pty` · `exec` · `git` · `ai` · `checkpoint` · `settings` · `db` · `browser` · `mcp` · `lsp` ·
-`dap` · `docker` · `skills` · `extensions` · `updater` · `netlog`. All commands are registered in
-`src-tauri/src/lib.rs`.
+`dap` · `docker` · `skills` · `extensions` · `updater` · `netlog` · `tests` · `tasks`. All commands are
+registered in `src-tauri/src/lib.rs`.
 
 ## Agent safety model
 
@@ -178,6 +179,39 @@ a run-all is a queue of package runs rather than a single shell. Go uses `go tes
 manager's `test` script, forwarding a file path only when a Jest or Vitest config exists. A missing
 runner is reported in the pane before anything is spawned. Output is capped and a workspace switch
 stops any run in flight.
+
+## Tasks
+
+The **Tasks** view collects everything Kudo can build or run in the open workspace from three
+sources, grouped in that order:
+
+- **`.kudo/tasks.json`** — a declarative manifest: `{ "tasks": [{ "label": "Build", "command": "go build ./...", "cwd": "cmd/api", "group": "build", "isDefault": true }] }`.
+  Labels are free text; `group` is `build`, `test` or omitted.
+- **`package.json` scripts** — every script of the root manifest and of nested manifests up to four
+  folders deep (dependencies and build output are skipped). Nested scripts are labelled
+  `sub: build`, and the package manager is picked from the nearest lockfile (`pnpm`, `yarn`,
+  `bun`, otherwise `npm`).
+- **`Makefile` targets** — the targets of the root `Makefile`/`makefile`/`GNUmakefile`, with
+  variable assignments and `.PHONY` lines filtered out.
+
+**Run build task** (the play button, `Ctrl+Alt+B`, or the palette's `Task: Run Build Task`) runs the
+single default task: the manifest task marked `"isDefault": true`, otherwise the root package
+`build` script, otherwise the `build` make target. Any row also runs on its own, and a row that
+already ran keeps its last status dot (running, passed, failed, cancelled).
+
+- **Output** — the bottom panel's **Tasks** tab streams stdout/stderr of the selected run, shows the
+  exact command and its working directory, and ends with a chip: `Task finished`, `Task failed` or
+  `Task cancelled` plus the duration. The status bar mirrors the last run.
+- **Stop** — the pane's stop button and the output header's **Stop** kill the whole process tree;
+  switching workspaces also stops anything in flight.
+- **Commands** — the palette adds `Task: Show Task Explorer`, `Run Build Task`, `Run Last Task`,
+  `Stop Running Task` and `Refresh Task Explorer`.
+
+Detection and execution live in `src-tauri/src/commands/tasks.rs`. Commands are re-validated in Rust
+before they run: the `cwd` must resolve inside the workspace and the command line is capped at
+4000 characters. Runs use `cmd /D /C <command>` on Windows and `sh -lc <command>` elsewhere, with
+output capped at 4000 lines in the UI. When a needed tool is not on `PATH` (for example `make`), the
+pane says so before you press play.
 
 ## Terminals
 

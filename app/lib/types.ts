@@ -194,6 +194,7 @@ export type SidebarView =
   | 'git'
   | 'debug'
   | 'tests'
+  | 'tasks'
   | 'agent'
   | 'database'
   | 'skills'

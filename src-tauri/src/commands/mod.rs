@@ -12,6 +12,7 @@ pub mod netlog;
 pub mod pty;
 pub mod settings;
 pub mod skills;
+pub mod tasks;
 pub mod tests;
 pub mod updater;
 pub mod workspace;

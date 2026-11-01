@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.8.0 — 2026-11-01
+
+Kudo can now discover, run and stop the workspace's build and run tasks.
+
+- **Task explorer** — a new **Tasks** activity collects runnable tasks from three sources and groups
+  them: a declarative `.kudo/tasks.json` manifest, `package.json` scripts (root plus nested manifests
+  up to four folders deep, with the package manager chosen from the nearest lockfile and nested
+  scripts labelled `sub: build`), and the root `Makefile`'s targets. The pane shows the command line
+  next to every row and warns when a required tool (for example `make`) is not on `PATH`.
+- **Run and stop** — each row runs on its own, the header play button runs the default build task
+  (manifest `isDefault`, else the root package `build` script, else the `build` make target), and
+  `Ctrl+Alt+B` does the same from anywhere. Rows keep a status dot (running, passed, failed,
+  cancelled). **Stop** in the pane header or the output panel kills the whole process tree, and a
+  workspace switch stops anything still running.
+- **Output panel** — the **Tasks** tab streams stdout and stderr of the current run, keeps the exact
+  command plus resolved working directory in the header, and ends with a `Task finished`,
+  `Task failed` or `Task cancelled` chip with the duration. The status bar mirrors the last run.
+- **Commands** — `Task: Show Task Explorer`, `Run Build Task`, `Run Last Task`, `Stop Running Task`
+  and `Refresh Task Explorer`, plus an empty state that can create a starter `.kudo/tasks.json`.
+- **Safety** — `task_run` re-validates the task in Rust: the command must be non-empty and at most
+  4000 characters, and its `cwd` must resolve inside the workspace. Runs use the platform shell
+  (`cmd /D /C` on Windows, `sh -lc` elsewhere) and the UI keeps the last 4000 output lines.
+
 ## 0.7.0 — 2026-10-31
 
 Kudo can now discover and run the workspace's tests.

@@ -6,6 +6,7 @@ import {
   Bug,
   CircleCheck,
   FlaskConical,
+  Hammer,
   GitBranch,
   Lock,
   RefreshCw,
@@ -18,6 +19,7 @@ const git = useGit()
 const lsp = useLsp()
 const debug = useDebug()
 const tests = useTests()
+const tasks = useTasks()
 const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
 const info = useState<{ name: string; version: string; platform: string } | null>(
   'kudo:app-info',
@@ -66,7 +68,7 @@ onMounted(async () => {
   try {
     info.value = await call('app_info')
   } catch {
-    info.value = { name: 'Kudo', version: '0.7.0', platform: 'browser' }
+    info.value = { name: 'Kudo', version: '0.8.0', platform: 'browser' }
   }
 })
 </script>
@@ -124,6 +126,18 @@ onMounted(async () => {
       <span class="debug-summary">{{ tests.summary.value }}</span>
     </button>
 
+    <button
+      v-if="tasks.runStatus.value !== 'idle'"
+      class="status-item clickable status-tasks"
+      :class="`is-${tasks.runStatus.value}`"
+      :title="tasks.runLabel.value || tasks.summary.value"
+      :data-status="tasks.runStatus.value"
+      @click="ide.panelTab.value = 'tasks'; ide.panelVisible.value = true"
+    >
+      <Hammer :size="12" :style="{ color: tasks.statusColor() }" />
+      <span class="debug-summary">{{ tasks.summary.value }}</span>
+    </button>
+
     <button class="status-item clickable" title="Problems" @click="ide.togglePanel('problems')">
       <CircleCheck :size="12" style="color: var(--green)" />
       {{ lsp.errorCount.value }}
@@ -160,7 +174,7 @@ onMounted(async () => {
 
     <span class="status-item" :title="isTauri() ? info?.platform : 'browser mock'">
       <span class="dot-live" :style="isTauri() ? '' : 'background: var(--orange); box-shadow: none'" />
-      {{ info?.name ?? 'Kudo' }} {{ info?.version ?? '0.7.0' }}
+      {{ info?.name ?? 'Kudo' }} {{ info?.version ?? '0.8.0' }}
     </span>
   </footer>
 </template>

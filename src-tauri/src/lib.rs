@@ -114,6 +114,12 @@ pub fn run() {
             commands::tests::test_cancel,
             commands::tests::test_cancel_all,
             commands::tests::tests_toolchain,
+            // task runner
+            commands::tasks::tasks_detect,
+            commands::tasks::task_run,
+            commands::tasks::task_cancel,
+            commands::tasks::task_cancel_all,
+            commands::tasks::tasks_toolchain,
             // checkpoints
             commands::checkpoint::checkpoint_snapshot,
             commands::checkpoint::checkpoint_get,

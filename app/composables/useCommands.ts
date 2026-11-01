@@ -22,6 +22,7 @@ export function useCommands() {
   const database = useDatabase()
   const debug = useDebug()
   const tests = useTests()
+  const tasks = useTasks()
   const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   const extensions = useExtensions()
   const themes = useThemes()
@@ -334,6 +335,50 @@ export function useCommands() {
       label: 'Test: Refresh Test Explorer',
       group: 'Test',
       run: () => tests.detect()
+    },
+    {
+      id: 'tasks.show',
+      label: 'Task: Show Task Explorer',
+      group: 'Task',
+      run: () => {
+        ide.sidebarView.value = 'tasks'
+        ide.sidebarVisible.value = true
+      }
+    },
+    {
+      id: 'tasks.run-default',
+      label: 'Task: Run Build Task',
+      group: 'Task',
+      hint: 'Ctrl+Alt+B',
+      run: async () => {
+        ide.panelTab.value = 'tasks'
+        ide.panelVisible.value = true
+        const started = await tasks.runDefault()
+        if (!started) ide.notify('No default build task. Mark one in .kudo/tasks.json.', 'info')
+      }
+    },
+    {
+      id: 'tasks.run-last',
+      label: 'Task: Run Last Task',
+      group: 'Task',
+      run: async () => {
+        ide.panelTab.value = 'tasks'
+        ide.panelVisible.value = true
+        const started = await tasks.runLast()
+        if (!started) ide.notify('No task to run yet.', 'info')
+      }
+    },
+    {
+      id: 'tasks.stop',
+      label: 'Task: Stop Running Task',
+      group: 'Task',
+      run: () => tasks.stop()
+    },
+    {
+      id: 'tasks.refresh',
+      label: 'Task: Refresh Task Explorer',
+      group: 'Task',
+      run: () => tasks.detect()
     },
     {
       id: 'terminal.new',

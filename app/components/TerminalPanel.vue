@@ -5,11 +5,13 @@ import { call } from '../lib/api'
 import type { TerminalShellInfo } from '../lib/types'
 import { useTerminalEpoch } from '../composables/useCommands'
 import ProblemsPanel from './ProblemsPanel.vue'
+import TaskOutput from './TaskOutput.vue'
 import TestOutput from './TestOutput.vue'
 
 const ide = useIde()
 const lsp = useLsp()
 const tests = useTests()
+const tasks = useTasks()
 const { lines: outputLines, clear: clearOutput } = useOutputLog()
 const epoch = useTerminalEpoch()
 
@@ -300,6 +302,14 @@ watch(
         <span v-if="tests.active.value" class="dot-live" />
       </button>
       <button
+        class="panel-tab panel-tab-tasks"
+        :class="{ active: ide.panelTab.value === 'tasks' }"
+        @click="ide.panelTab.value = 'tasks'"
+      >
+        Tasks
+        <span v-if="tasks.active.value" class="dot-live" />
+      </button>
+      <button
         class="panel-tab"
         :class="{ active: ide.panelTab.value === 'network' }"
         @click="ide.panelTab.value = 'network'"
@@ -428,6 +438,7 @@ watch(
 
     <NetworkPanel v-if="ide.panelTab.value === 'network'" />
     <TestOutput v-if="ide.panelTab.value === 'tests'" />
+    <TaskOutput v-if="ide.panelTab.value === 'tasks'" />
   </section>
 </template>
 

@@ -5,6 +5,7 @@ import {
   GitBranch,
   Bug,
   FlaskConical,
+  ListChecks,
   Bot,
   Database,
   Settings2,
@@ -26,6 +27,7 @@ const items: { id: SidebarView; icon: any; label: string; badge?: boolean }[] = 
   { id: 'git', icon: GitBranch, label: 'Source Control', badge: true },
   { id: 'debug', icon: Bug, label: 'Run and Debug' },
   { id: 'tests', icon: FlaskConical, label: 'Tests' },
+  { id: 'tasks', icon: ListChecks, label: 'Tasks' },
   { id: 'agent', icon: Bot, label: 'Agent' }
 ]
 

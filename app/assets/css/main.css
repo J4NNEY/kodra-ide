@@ -1899,6 +1899,9 @@ kbd {
 .tests-summary.is-running {
   color: var(--warning, #d4a73c);
 }
+.tests-summary.is-cancelled {
+  color: var(--text-faint);
+}
 .tests-summary-text {
   flex: 1;
   min-width: 0;
@@ -1967,6 +1970,9 @@ kbd {
   color: var(--warning, #d4a73c);
 }
 .tests-status.is-skipped {
+  color: var(--text-faint);
+}
+.tests-status.is-cancelled {
   color: var(--text-faint);
 }
 .tests-name {

@@ -684,6 +684,47 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
       return ok(true)
     case 'test_cancel_all':
       return ok(0)
+    case 'tasks_detect':
+      return ok([
+        {
+          id: 'kudo:0',
+          label: 'Build',
+          source: 'kudo',
+          detail: 'pnpm build',
+          command: 'pnpm build',
+          cwd: '',
+          group: 'build',
+          isDefault: true
+        },
+        {
+          id: 'package::dev',
+          label: 'dev',
+          source: 'package',
+          detail: 'pnpm run dev',
+          command: 'pnpm run dev',
+          cwd: '',
+          group: 'none',
+          isDefault: false
+        },
+        {
+          id: 'make:lint',
+          label: 'lint',
+          source: 'make',
+          detail: 'make lint',
+          command: 'make lint',
+          cwd: '',
+          group: 'none',
+          isDefault: false
+        }
+      ])
+    case 'tasks_toolchain':
+      return ok({ npm: 'C:\\Program Files\\nodejs\\npm.cmd', node: 'C:\\Program Files\\nodejs\\node.exe' })
+    case 'task_run':
+      return ok({ id: 'mock-task-run', label: 'pnpm build', cwd: 'C:\\demo\\kudo-workspace' })
+    case 'task_cancel':
+      return ok(true)
+    case 'task_cancel_all':
+      return ok(0)
     case 'terminal_shells': {
       const configured = loadSettings().terminalShell
       const configuredName = configured

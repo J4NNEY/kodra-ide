@@ -7,6 +7,7 @@ const chat = useChat()
 const lsp = useLsp()
 const debug = useDebug()
 const tests = useTests()
+const tasks = useTasks()
 const extensions = useExtensions()
 
 // Overlays and heavy panes are split out of the entry bundle.
@@ -58,6 +59,7 @@ onMounted(async () => {
   void lsp.listen()
   void debug.init()
   void tests.init()
+  void tasks.init()
   await git.refresh()
   booting.value = false
 })
@@ -71,6 +73,8 @@ watch(
     debug.suggestConfig()
     tests.reset()
     if (ide.workspace.value) void tests.detect()
+    tasks.reset()
+    if (ide.workspace.value) void tasks.detect()
     chat.load()
     await git.refresh()
   }

@@ -53,7 +53,7 @@ export function useIde() {
   const sidebarVisible = useState<boolean>('kudo:sidebar-visible', () => true)
   const chatOpen = useState<boolean>('kudo:chat-open', () => true)
   const panelVisible = useState<boolean>('kudo:panel-visible', () => true)
-  const panelTab = useState<'terminal' | 'problems' | 'output' | 'network' | 'tests'>(
+  const panelTab = useState<'terminal' | 'problems' | 'output' | 'network' | 'tests' | 'tasks'>(
     'kudo:panel-tab',
     () => 'terminal'
   )
@@ -479,7 +479,7 @@ export function useIde() {
     chatOpen.value = !chatOpen.value
   }
 
-  function togglePanel(tab?: 'terminal' | 'problems' | 'output' | 'network' | 'tests') {
+  function togglePanel(tab?: 'terminal' | 'problems' | 'output' | 'network' | 'tests' | 'tasks') {
     if (tab) {
       if (panelVisible.value && panelTab.value === tab) {
         panelVisible.value = false

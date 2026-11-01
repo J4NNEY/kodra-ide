@@ -9,6 +9,7 @@ export function useKeybindings() {
   const database = useDatabase()
   const debug = useDebug()
   const tests = useTests()
+  const tasks = useTasks()
   const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   let chord: string | null = null
   let chordTimer: ReturnType<typeof setTimeout> | null = null
@@ -134,6 +135,16 @@ export function useKeybindings() {
       ide.panelTab.value = 'tests'
       ide.panelVisible.value = true
       void tests.runAll()
+      return
+    }
+
+    if (event.altKey && key === 'b') {
+      event.preventDefault()
+      ide.panelTab.value = 'tasks'
+      ide.panelVisible.value = true
+      void tasks.runDefault().then((started) => {
+        if (!started) ide.notify('No default build task. Mark one in .kudo/tasks.json.', 'info')
+      })
       return
     }
 
