@@ -49,6 +49,9 @@ pnpm desktop:build # production installer (NSIS)
 pnpm exec vue-tsc --noEmit -p tsconfig.json   # typecheck (excludes src-tauri build output)
 ```
 
+A step-by-step setup and run guide (in Indonesian, covering prerequisites, toolchains and
+troubleshooting) lives in [`docs/running.md`](docs/running.md).
+
 Language servers are discovered from `PATH`; install the one for your language
 (for example `rustup component add rust-analyzer`, or
 `go install golang.org/x/tools/gopls@latest`). `Settings → Editor → Language servers` lists
