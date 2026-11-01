@@ -32,5 +32,10 @@ export default defineNuxtConfig({
     }
   },
   typescript: { strict: true },
+  // Kudo is a single-page static app: it has no route rules and never calls
+  // useAppManifest, so the app-manifest experiment only adds an SSR-only
+  // `#app-manifest` import that Vite's client pre-transform cannot resolve on a
+  // cold dev start. Turning it off keeps the dev log clean.
+  experimental: { appManifest: false },
   telemetry: false
 })

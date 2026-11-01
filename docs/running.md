@@ -226,7 +226,7 @@ mengekspos `window.__kudoOpenFolder(path)` untuk membuka workspace tanpa dialog.
 | `Another Nuxt dev server is already running (PID x)` | `pnpm dev`/`pnpm desktop` lain masih hidup | `taskkill /PID x /F`, atau `NUXT_IGNORE_LOCK=1` |
 | `pnpm desktop:build` gagal di `beforeBuildCommand` | dev server masih memakai `.nuxt` | hentikan dev server dulu, lalu build ulang |
 | Port 3000 dipakai aplikasi lain | port default | hentikan prosesnya, atau ubah `pnpm dev` + `devUrl` di `src-tauri/tauri.conf.json` |
-| Error `#app-manifest` saat boot dev | Vite belum warm-up | abaikan; hilang setelah build pertama selesai |
+| Error `#app-manifest` saat boot dev | Vite memproses import SSR-only sebelum virtual module Nuxt siap (hanya pada boot pertama saat `.nuxt` masih dingin) | Tidak berbahaya. Sudah dimatikan lewat `experimental.appManifest: false`; kalau muncul lagi, hapus `.nuxt` lalu jalankan ulang |
 | `cargo`/`rustc` tidak dikenali | Rust belum terpasang / `PATH` lama | install rustup, buka terminal baru |
 | `link.exe not found` | Build Tools C++ belum ada | install workload *Desktop development with C++* |
 | Jendela putih di build release | `.output/public` kosong / rusak | jalankan `pnpm build` lalu `pnpm desktop:build` |
