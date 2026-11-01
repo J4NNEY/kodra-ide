@@ -76,6 +76,15 @@ export function useKeybindings() {
       return
     }
 
+    // Shift+Alt+F formats the active buffer without Ctrl, so it is handled
+    // before the Ctrl/Cmd gate below.
+    if (event.altKey && event.shiftKey && event.key.toLowerCase() === 'f') {
+      if (ide.settingsOpen.value || ide.palette.value.mode !== 'none') return
+      event.preventDefault()
+      void ide.formatDocument()
+      return
+    }
+
     const mod = event.ctrlKey || event.metaKey
     if (!mod) {
       chord = null

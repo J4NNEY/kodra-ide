@@ -256,6 +256,8 @@ const defaultSettings: Settings = {
   terminalShell: 'powershell.exe',
   terminalFontSize: 12,
   restoreSession: true,
+  formatOnSave: false,
+  lintOnSave: false,
   ai: {
     provider: 'demo',
     baseUrl: 'https://api.openai.com/v1',
@@ -725,6 +727,91 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
       return ok(true)
     case 'task_cancel_all':
       return ok(0)
+    case 'format_toolchain':
+      return ok([
+        {
+          id: 'prettier',
+          label: 'Prettier',
+          kind: 'formatter',
+          languages: ['javascript', 'typescript', 'json', 'css', 'html', 'markdown', 'yaml', 'vue'],
+          path: 'C:\\demo\\kudo-workspace\\node_modules\\prettier\\bin\\prettier.cjs',
+          scope: 'workspace',
+          install: 'npm install -D prettier'
+        },
+        {
+          id: 'gofmt',
+          label: 'gofmt',
+          kind: 'formatter',
+          languages: ['go'],
+          path: 'C:\\Program Files\\Go\\bin\\gofmt.exe',
+          scope: 'path',
+          install: 'ships with the Go toolchain'
+        },
+        {
+          id: 'rustfmt',
+          label: 'rustfmt',
+          kind: 'formatter',
+          languages: ['rust'],
+          path: '',
+          scope: '',
+          install: 'rustup component add rustfmt'
+        },
+        {
+          id: 'black',
+          label: 'Black',
+          kind: 'formatter',
+          languages: ['python'],
+          path: 'C:\\Python313\\Scripts\\black.exe',
+          scope: 'path',
+          install: 'pip install black'
+        },
+        {
+          id: 'eslint',
+          label: 'ESLint',
+          kind: 'linter',
+          languages: ['javascript', 'typescript', 'vue'],
+          path: 'C:\\demo\\kudo-workspace\\node_modules\\eslint\\bin\\eslint.js',
+          scope: 'workspace',
+          install: 'npm install -D eslint'
+        },
+        {
+          id: 'ruff',
+          label: 'Ruff',
+          kind: 'linter',
+          languages: ['python'],
+          path: 'C:\\Python313\\Scripts\\ruff.exe',
+          scope: 'path',
+          install: 'pip install ruff'
+        }
+      ])
+    case 'format_document': {
+      const text = String(args.text ?? '')
+      // The browser demo has no real formatter: normalise trailing spaces so
+      // the save path can still be exercised.
+      const formatted = text
+        .split('\n')
+        .map((line: string) => line.replace(/[ \t]+$/, ''))
+        .join('\n')
+      return ok({ tool: 'prettier', changed: formatted !== text, text: formatted })
+    }
+    case 'lint_document':
+      return ok({
+        tool: 'eslint',
+        issues: [
+          {
+            line: 2,
+            column: 1,
+            endLine: 2,
+            endColumn: 8,
+            message: 'Demo lint issue: prefer const',
+            severity: 'warning',
+            source: 'eslint (prefer-const)',
+            code: 'prefer-const'
+          }
+        ],
+        raw: '',
+        error: ''
+      })
     case 'terminal_shells': {
       const configured = loadSettings().terminalShell
       const configuredName = configured

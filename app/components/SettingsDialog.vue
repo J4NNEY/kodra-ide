@@ -22,6 +22,7 @@ import { call } from '../lib/api'
 
 const ide = useIde()
 const lsp = useLsp()
+const format = useFormat()
 const themes = useThemes()
 const extensions = useExtensions()
 const settingsTab = useState<string>('kudo:settings-tab', () => 'appearance')
@@ -181,7 +182,7 @@ async function checkUpdates() {
   try {
     updateInfo.value = await call<UpdateCheck>('update_check', {
       feedUrl: draft.value.updateFeed,
-      current: appInfo.value?.version ?? '0.8.0'
+      current: appInfo.value?.version ?? '0.9.0'
     })
     if (!updateInfo.value.available) ide.notify('Kudo is up to date', 'success')
   } catch (err) {
@@ -262,7 +263,7 @@ watch(
       <div class="modal settings-modal">
         <div class="modal-head">
           <h2>Settings</h2>
-          <span class="hint">Kudo {{ appInfo?.version ?? '0.8.0' }}</span>
+          <span class="hint">Kudo {{ appInfo?.version ?? '0.9.0' }}</span>
           <div style="flex: 1" />
           <button class="icon-btn" @click="close"><X :size="15" /></button>
         </div>
@@ -421,6 +422,56 @@ watch(
                   :class="{ on: draft.restoreSession }"
                   @click="draft.restoreSession = !draft.restoreSession"
                 />
+              </div>
+
+              <div class="field toggle-field">
+                <div>
+                  <label>Format on save</label>
+                  <span class="hint">
+                    Run Prettier, gofmt, rustfmt or Black before the file is written.
+                  </span>
+                </div>
+                <button
+                  class="switch format-on-save-switch"
+                  :class="{ on: draft.formatOnSave }"
+                  @click="draft.formatOnSave = !draft.formatOnSave"
+                />
+              </div>
+
+              <div class="field toggle-field">
+                <div>
+                  <label>Lint on save</label>
+                  <span class="hint">
+                    Run ESLint or Ruff after saving; problems land in the Problems panel.
+                  </span>
+                </div>
+                <button
+                  class="switch lint-on-save-switch"
+                  :class="{ on: draft.lintOnSave }"
+                  @click="draft.lintOnSave = !draft.lintOnSave"
+                />
+              </div>
+
+              <div class="pane-title" style="margin-top: 18px">Formatters and linters</div>
+              <div class="field">
+                <span class="hint">
+                  Detected for this workspace. A local install under
+                  <span class="mono">node_modules</span> wins over a global one.
+                </span>
+                <div class="lsp-list">
+                  <div v-for="tool in format.tools.value" :key="tool.id" class="lsp-row">
+                    <div class="lsp-main">
+                      <span class="lsp-name">{{ tool.label }}</span>
+                      <span class="lsp-langs">
+                        {{ tool.kind }} · {{ tool.languages.join(', ') }}
+                      </span>
+                    </div>
+                    <span v-if="tool.path" class="lsp-path" :title="tool.path">
+                      {{ tool.scope }}
+                    </span>
+                    <span v-else class="lsp-missing">not installed · {{ tool.install }}</span>
+                  </div>
+                </div>
               </div>
 
               <div class="pane-title" style="margin-top: 18px">Language servers</div>
@@ -666,7 +717,7 @@ watch(
               <div class="about">
                 <div class="empty-mark" style="width: 52px; height: 52px; font-size: 22px">K</div>
                 <div>
-                  <h3 style="margin: 0 0 2px">Kudo {{ appInfo?.version ?? '0.8.0' }}</h3>
+                  <h3 style="margin: 0 0 2px">Kudo {{ appInfo?.version ?? '0.9.0' }}</h3>
                   <p class="hint" style="margin: 0">
                     A clean-room desktop IDE built with Tauri v2, Nuxt 3 and Rust.
                   </p>
@@ -698,7 +749,7 @@ watch(
 
                 <div v-if="updateInfo?.available" class="update-body">
                   <div class="row" style="justify-content: space-between">
-                    <span class="mono">{{ appInfo?.version ?? '0.8.0' }} → {{ updateInfo.latestVersion }}</span>
+                    <span class="mono">{{ appInfo?.version ?? '0.9.0' }} → {{ updateInfo.latestVersion }}</span>
                     <span class="hint">{{ updateInfo.publishedAt }}</span>
                   </div>
                   <pre v-if="updateInfo.notes" class="update-notes">{{ updateInfo.notes }}</pre>

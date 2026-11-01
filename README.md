@@ -24,6 +24,7 @@ public screenshots and the UI is written from scratch.
 | Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |
 | Tests | Test explorer for Go, Rust, Python and Node: auto-detection, framework groups, per-test status, run all/file/test, streamed output with command header, cancel, and gutter markers that run a test on click |
 | Tasks | Build/run task runner: `.kudo/tasks.json`, `package.json` scripts (nested, package-manager aware) and `Makefile` targets, default build task plus `Ctrl+Alt+B`, streamed output in the bottom panel, stop, per-row status |
+| Formatting | Prettier, gofmt, rustfmt and Black format the buffer before it is written (`Format on save`), format on demand (`Shift+Alt+F`), and a workspace-local install wins over `PATH`; ESLint and Ruff lint after saving into the Problems panel |
 | Docker | Containers/images tabs, start/stop/restart, logs, run image |
 | Network | Live request log (AI calls, browser fetches, update checks) in the bottom panel |
 | Updater | Feed check, download to temp, launch installer, reveal in Explorer (see `docs/updater.md`) |
@@ -80,7 +81,7 @@ src-tauri/
 ## Backend command groups
 
 `workspace` · `pty` · `exec` · `git` · `ai` · `checkpoint` · `settings` · `db` · `browser` · `mcp` · `lsp` ·
-`dap` · `docker` · `skills` · `extensions` · `updater` · `netlog` · `tests` · `tasks`. All commands are
+`dap` · `docker` · `skills` · `extensions` · `updater` · `netlog` · `tests` · `tasks` · `format`. All commands are
 registered in `src-tauri/src/lib.rs`.
 
 ## Agent safety model
@@ -212,6 +213,45 @@ before they run: the `cwd` must resolve inside the workspace and the command lin
 4000 characters. Runs use `cmd /D /C <command>` on Windows and `sh -lc <command>` elsewhere, with
 output capped at 4000 lines in the UI. When a needed tool is not on `PATH` (for example `make`), the
 pane says so before you press play.
+
+## Formatting and linting
+
+Kudo runs the formatters and linters you already have, without bundling any:
+
+| Tool | Kind | Languages | Install |
+| --- | --- | --- | --- |
+| Prettier | formatter | JS/TS/Vue, JSON, CSS, HTML, Markdown, YAML | `npm install -D prettier` |
+| gofmt | formatter | Go | ships with Go |
+| rustfmt | formatter | Rust | `rustup component add rustfmt` |
+| Black | formatter | Python | `pip install black` |
+| ESLint | linter | JS/TS/Vue | `npm install -D eslint` |
+| Ruff | linter | Python | `pip install ruff` |
+
+A workspace-local install wins: `node_modules/prettier/bin/prettier.cjs` (or
+`bin-prettier.js`) and `node_modules/eslint/bin/eslint.js` are spawned through Node, so the version
+pinned by the project is the one that runs. Otherwise Kudo falls back to `PATH`, and Python
+formatters are also found through `python -m` when the module is installed but the script is not.
+`Settings → Editor` lists every tool with `workspace` or `path` scope and shows the install command
+for the ones that are missing.
+
+- **Format on save** (Settings → Editor, or the palette) formats the **in-memory buffer** first and
+  then writes the result, so a formatter error never blocks the save: the file is written unchanged
+  and a `Format failed: …` toast explains why. A successful format reports
+  `Saved x.go · formatted with gofmt`.
+- **Format Document** (`Shift+Alt+F`) formats the active buffer without saving it, so you can review
+  the diff and undo it.
+- **Lint on save** runs ESLint or Ruff on the saved text and merges the result into the **Problems**
+  panel and the editor squiggles, next to any language server diagnostics. Lint never blocks a save.
+  The status bar chip sums language server and linter counts.
+- **Commands** — the palette adds `Format: Format Document`, `Lint Active File`, `Toggle Format On
+  Save`, `Toggle Lint On Save` and `Refresh Formatter Toolchain`.
+
+Formatting and linting live in `src-tauri/src/commands/format.rs`. Every tool runs with the
+workspace root as its working directory (so ESLint finds `eslint.config.js`), stdin carries the
+buffer, and a 20-second watchdog kills the whole process tree if a tool hangs. Buffers over 2 MiB
+are refused. Only JSON output is parsed: ESLint's `--format json` and
+`ruff check --output-format json`; unparseable output is surfaced verbatim instead of being guessed
+at.
 
 ## Terminals
 

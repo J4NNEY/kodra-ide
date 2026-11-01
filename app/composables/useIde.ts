@@ -325,14 +325,86 @@ export function useIde() {
     if (!target) return
     const tab = tabs.value.find((t) => t.path === target)
     if (!tab || !tab.dirty) return
+    const format = useFormat()
+    let text = tab.content
+    let formattedWith = ''
+    if (format.formatOnSave.value && !tab.binary) {
+      const outcome = await format.formatText(target, text)
+      if (outcome.error) {
+        notify(`Format failed: ${outcome.error}`, 'error')
+      } else if (outcome.changed) {
+        text = outcome.text
+        tab.content = text
+        formattedWith = outcome.tool
+      }
+    }
     try {
-      await call('write_file', { path: target, text: tab.content })
-      tab.savedContent = tab.content
+      await call('write_file', { path: target, text })
+      tab.savedContent = text
       tab.dirty = false
-      notify(`Saved ${tab.name}`, 'success')
+      notify(
+        formattedWith ? `Saved ${tab.name} · formatted with ${formattedWith}` : `Saved ${tab.name}`,
+        'success'
+      )
+      if (format.lintOnSave.value && !tab.binary) void format.lintText(target, text)
     } catch (err) {
       notify(String(err), 'error')
     }
+  }
+
+  /** Format the active buffer without writing it (the editor keeps it dirty). */
+  async function formatDocument(path?: string) {
+    const target = path ?? activePath.value
+    const tab = tabs.value.find((t) => t.path === target)
+    if (!tab || tab.binary) {
+      notify('Open a text file to format', 'info')
+      return
+    }
+    const format = useFormat()
+    const outcome = await format.formatText(tab.path, tab.content)
+    if (outcome.error) {
+      notify(`Format failed: ${outcome.error}`, 'error')
+      return
+    }
+    if (!outcome.tool) {
+      notify('No formatter installed for this file type', 'info')
+      return
+    }
+    if (!outcome.changed) {
+      notify(`Already formatted with ${outcome.tool}`, 'info')
+      return
+    }
+    updateContent(tab.path, outcome.text)
+    notify(`Formatted with ${outcome.tool}`, 'success')
+  }
+
+  /** Run the linter for the active buffer and store its diagnostics. */
+  async function lintDocument(path?: string) {
+    const target = path ?? activePath.value
+    const tab = tabs.value.find((t) => t.path === target)
+    if (!tab || tab.binary) {
+      notify('Open a text file to lint', 'info')
+      return
+    }
+    const format = useFormat()
+    const outcome = await format.lintText(tab.path, tab.content)
+    if (!outcome) {
+      notify('The linter could not be started', 'error')
+      return
+    }
+    if (!outcome.tool) {
+      notify('No linter installed for this file type', 'info')
+      return
+    }
+    if (outcome.error) {
+      notify(`${outcome.tool}: ${outcome.error}`, 'error')
+      return
+    }
+    const count = outcome.issues.length
+    notify(
+      count ? `${outcome.tool} reported ${count} problem${count === 1 ? '' : 's'}` : `${outcome.tool}: no problems`,
+      count ? 'info' : 'success'
+    )
   }
 
   /**
@@ -530,6 +602,8 @@ export function useIde() {
     openFile,
     updateContent,
     saveTab,
+    formatDocument,
+    lintDocument,
     reloadTab,
     closeTab,
     removeTabs,

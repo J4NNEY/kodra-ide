@@ -20,6 +20,7 @@ const lsp = useLsp()
 const debug = useDebug()
 const tests = useTests()
 const tasks = useTasks()
+const format = useFormat()
 const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
 const info = useState<{ name: string; version: string; platform: string } | null>(
   'kudo:app-info',
@@ -68,7 +69,7 @@ onMounted(async () => {
   try {
     info.value = await call('app_info')
   } catch {
-    info.value = { name: 'Kudo', version: '0.8.0', platform: 'browser' }
+    info.value = { name: 'Kudo', version: '0.9.0', platform: 'browser' }
   }
 })
 </script>
@@ -138,11 +139,15 @@ onMounted(async () => {
       <span class="debug-summary">{{ tasks.summary.value }}</span>
     </button>
 
-    <button class="status-item clickable" title="Problems" @click="ide.togglePanel('problems')">
+    <button
+      class="status-item clickable status-problems"
+      title="Problems (language servers and command line linters)"
+      @click="ide.togglePanel('problems')"
+    >
       <CircleCheck :size="12" style="color: var(--green)" />
-      {{ lsp.errorCount.value }}
+      {{ lsp.errorCount.value + format.lintErrorCount.value }}
       <AlertCircle :size="12" style="color: var(--text-faint); margin-left: 4px" />
-      {{ lsp.warningCount.value }}
+      {{ lsp.warningCount.value + format.lintWarningCount.value }}
     </button>
 
     <span v-if="git.status.value?.files.length" class="status-item" title="Changed files">
@@ -174,7 +179,7 @@ onMounted(async () => {
 
     <span class="status-item" :title="isTauri() ? info?.platform : 'browser mock'">
       <span class="dot-live" :style="isTauri() ? '' : 'background: var(--orange); box-shadow: none'" />
-      {{ info?.name ?? 'Kudo' }} {{ info?.version ?? '0.8.0' }}
+      {{ info?.name ?? 'Kudo' }} {{ info?.version ?? '0.9.0' }}
     </span>
   </footer>
 </template>

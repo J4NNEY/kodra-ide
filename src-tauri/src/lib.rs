@@ -120,6 +120,10 @@ pub fn run() {
             commands::tasks::task_cancel,
             commands::tasks::task_cancel_all,
             commands::tasks::tasks_toolchain,
+            // formatter and linter
+            commands::format::format_toolchain,
+            commands::format::format_document,
+            commands::format::lint_document,
             // checkpoints
             commands::checkpoint::checkpoint_snapshot,
             commands::checkpoint::checkpoint_get,

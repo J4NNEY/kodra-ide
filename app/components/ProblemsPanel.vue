@@ -5,10 +5,18 @@ import { relativeTo } from '../lib/api'
 
 const ide = useIde()
 const lsp = useLsp()
+const format = useFormat()
+
+const all = computed(() => {
+  const merged = [...lsp.allDiagnostics.value, ...format.lintDiagnostics.value]
+  return merged.sort((a, b) =>
+    a.path === b.path ? a.line - b.line || a.column - b.column : a.path.localeCompare(b.path)
+  )
+})
 
 const groups = computed(() => {
-  const byPath = new Map<string, typeof lsp.allDiagnostics.value>()
-  for (const item of lsp.allDiagnostics.value) {
+  const byPath = new Map<string, typeof all.value>()
+  for (const item of all.value) {
     const list = byPath.get(item.path) ?? []
     list.push(item)
     byPath.set(item.path, list)
@@ -21,6 +29,14 @@ const groups = computed(() => {
     warnings: items.filter((i) => i.severity === 'warning').length
   }))
 })
+
+const linterErrors = computed(() =>
+  Object.entries(format.errors.value).map(([path, message]) => ({
+    path,
+    message,
+    label: ide.workspace.value ? relativeTo(ide.workspace.value.path, path) : path
+  }))
+)
 
 function iconFor(severity: string) {
   if (severity === 'error') return CircleAlert
@@ -38,8 +54,8 @@ function open(path: string, line: number) {
     <div v-if="!groups.length" class="problems-empty">
       <span>No problems have been detected in the workspace.</span>
       <span class="hint">
-        Diagnostics appear here once a language server is connected (Rust, Go, TypeScript, Python and
-        others).
+        Diagnostics come from connected language servers (Rust, Go, TypeScript, Python and others)
+        and from the command line linters that run on save.
       </span>
     </div>
 
@@ -63,6 +79,11 @@ function open(path: string, line: number) {
         <span class="problem-source">{{ item.source }}</span>
         <span class="problem-loc">{{ item.line }}:{{ item.column }}</span>
       </button>
+    </div>
+
+    <div v-for="error in linterErrors" :key="`linter:${error.path}`" class="linter-error">
+      <CircleAlert :size="13" class="problem-icon" />
+      <span class="problem-message" :title="error.message">{{ error.label }}: {{ error.message }}</span>
     </div>
   </div>
 </template>
@@ -88,8 +109,7 @@ function open(path: string, line: number) {
 }
 .problem-group + .problem-group {
   margin-top: 6px;
-}
-.problem-file {
+}.problem-file {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -169,5 +189,24 @@ function open(path: string, line: number) {
   flex: 0 0 auto;
   color: var(--text-faint);
   font-size: 10.5px;
+}
+.linter-error {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  color: var(--red);
+  font-size: 11px;
+}
+.linter-error .problem-icon {
+  flex: 0 0 auto;
+  transform: translateY(2px);
+}
+.linter-error .problem-message {
+  color: var(--text-muted);
 }
 </style>

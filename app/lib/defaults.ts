@@ -12,6 +12,8 @@ export const defaultSettings: Settings = {
   terminalShell: 'powershell.exe',
   terminalFontSize: 12,
   restoreSession: true,
+  formatOnSave: false,
+  lintOnSave: false,
   ai: {
     provider: 'demo',
     baseUrl: 'https://api.openai.com/v1',

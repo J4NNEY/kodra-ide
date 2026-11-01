@@ -23,6 +23,7 @@ export function useCommands() {
   const debug = useDebug()
   const tests = useTests()
   const tasks = useTasks()
+  const format = useFormat()
   const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   const extensions = useExtensions()
   const themes = useThemes()
@@ -379,6 +380,50 @@ export function useCommands() {
       label: 'Task: Refresh Task Explorer',
       group: 'Task',
       run: () => tasks.detect()
+    },
+    {
+      id: 'format.document',
+      label: 'Format: Format Document',
+      group: 'Format',
+      hint: 'Shift+Alt+F',
+      run: () => ide.formatDocument()
+    },
+    {
+      id: 'format.lint',
+      label: 'Format: Lint Active File',
+      group: 'Format',
+      run: () => ide.lintDocument()
+    },
+    {
+      id: 'format.toggle-on-save',
+      label: 'Format: Toggle Format On Save',
+      group: 'Format',
+      run: async () => {
+        const on = await format.toggleFormatOnSave()
+        ide.notify(`Format on save ${on ? 'enabled' : 'disabled'}`, 'info')
+      }
+    },
+    {
+      id: 'format.toggle-lint-on-save',
+      label: 'Format: Toggle Lint On Save',
+      group: 'Format',
+      run: async () => {
+        const on = await format.toggleLintOnSave()
+        ide.notify(`Lint on save ${on ? 'enabled' : 'disabled'}`, 'info')
+      }
+    },
+    {
+      id: 'format.refresh',
+      label: 'Format: Refresh Formatter Toolchain',
+      group: 'Format',
+      run: async () => {
+        const found = await format.detect()
+        const list = found.filter((tool) => tool.path).map((tool) => tool.label)
+        ide.notify(
+          list.length ? `Formatters and linters: ${list.join(', ')}` : 'No formatters or linters found',
+          list.length ? 'success' : 'info'
+        )
+      }
     },
     {
       id: 'terminal.new',

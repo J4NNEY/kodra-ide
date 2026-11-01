@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.9.0 — 2026-11-01
+
+Kudo can now format the buffer before saving and lint it afterwards.
+
+- **Format on save** — an opt-in setting that runs Prettier, gofmt, rustfmt or Black on the
+  **in-memory buffer** and writes the result, so unsaved edits are formatted too. A formatter error
+  never blocks the save: the file is written unchanged and a `Format failed: …` toast shows the
+  tool's message. Successful saves report `Saved x.go · formatted with gofmt`.
+- **Format Document** — `Shift+Alt+F`, also available as `Format: Format Document` in the palette,
+  formats the active buffer without saving it, leaving the tab dirty so the change can be reviewed or
+  undone. Plain text files answer `No formatter installed for this file type`.
+- **Lint on save** — an opt-in setting that runs ESLint or Ruff on the saved text. Diagnostics are
+  normalised to 1-based ranges with the rule id in their source (`eslint (no-unused-vars)`,
+  `ruff (F401)`) and merged into the **Problems** panel, the editor squiggles and the status-bar
+  counts, next to language server diagnostics. Linting never blocks a save.
+- **Toolchain** — the six tools are detected per workspace: a local install under `node_modules`
+  wins over `PATH` (`prettier`, `eslint` run through Node), Python tools also resolve through
+  `python -m` when only the module is installed, and `Settings → Editor` lists each tool with its
+  `workspace`/`path` scope or the install command when it is missing.
+- **Commands** — `Format: Format Document`, `Lint Active File`, `Toggle Format On Save`,
+  `Toggle Lint On Save` and `Refresh Formatter Toolchain`.
+- **Safety** — tools run with the workspace root as their working directory (so project configs such
+  as `eslint.config.js` apply), receive the buffer on stdin, and are killed with their whole process
+  tree after 20 seconds. Buffers over 2 MiB are refused, only JSON output is parsed, and unparseable
+  output is surfaced verbatim instead of being guessed at.
+
 ## 0.8.0 — 2026-11-01
 
 Kudo can now discover, run and stop the workspace's build and run tasks.

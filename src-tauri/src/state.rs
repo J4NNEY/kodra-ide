@@ -80,6 +80,10 @@ pub struct Settings {
     pub terminal_shell: String,
     pub terminal_font_size: u32,
     pub restore_session: bool,
+    #[serde(default)]
+    pub format_on_save: bool,
+    #[serde(default)]
+    pub lint_on_save: bool,
     pub ai: AiSettings,
     pub recent_workspaces: Vec<RecentWorkspace>,
     #[serde(default)]
@@ -107,6 +111,8 @@ impl Default for Settings {
             terminal_shell: default_shell(),
             terminal_font_size: 12,
             restore_session: true,
+            format_on_save: false,
+            lint_on_save: false,
             ai: AiSettings::default(),
             recent_workspaces: Vec::new(),
             mcp_servers: Vec::new(),

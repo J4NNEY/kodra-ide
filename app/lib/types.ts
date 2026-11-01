@@ -140,6 +140,8 @@ export interface Settings {
   terminalShell: string
   terminalFontSize: number
   restoreSession: boolean
+  formatOnSave: boolean
+  lintOnSave: boolean
   ai: AiSettings
   recentWorkspaces: RecentWorkspace[]
   mcpServers: McpServerConfig[]

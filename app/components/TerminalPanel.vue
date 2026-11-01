@@ -10,6 +10,7 @@ import TestOutput from './TestOutput.vue'
 
 const ide = useIde()
 const lsp = useLsp()
+const format = useFormat()
 const tests = useTests()
 const tasks = useTasks()
 const { lines: outputLines, clear: clearOutput } = useOutputLog()
@@ -284,7 +285,7 @@ watch(
         :class="{ active: ide.panelTab.value === 'problems' }"
         @click="ide.panelTab.value = 'problems'"
       >
-        Problems <span class="tab-count">{{ lsp.allDiagnostics.value.length }}</span>
+        Problems <span class="tab-count">{{ lsp.allDiagnostics.value.length + format.lintDiagnostics.value.length }}</span>
       </button>
       <button
         class="panel-tab"

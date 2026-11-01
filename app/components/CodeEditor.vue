@@ -37,7 +37,7 @@ import {
   closeBracketsKeymap,
   completionKeymap
 } from '@codemirror/autocomplete'
-import { forceLinting, lintGutter, linter } from '@codemirror/lint'
+import { lintGutter, linter, setDiagnostics } from '@codemirror/lint'
 import type { Diagnostic as CmDiagnostic } from '@codemirror/lint'
 import { hoverTooltip } from '@codemirror/view'
 import type { Text } from '@codemirror/state'
@@ -75,6 +75,7 @@ const emit = defineEmits<{
 const ide = useIde()
 const lsp = useLsp()
 const themes = useThemes()
+const format = useFormat()
 const host = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
 const wrapCompartment = new Compartment()
@@ -425,21 +426,44 @@ function offsetAt(doc: Text, line: number, column: number) {
   return Math.min(target.to, target.from + Math.max(0, column - 1))
 }
 
-/** Translate the stored LSP diagnostics into CodeMirror diagnostics. */
+/** Translate the stored LSP and linter diagnostics into CodeMirror ones. */
 function cmDiagnostics(): CmDiagnostic[] {
   if (!view) return []
   const doc = view.state.doc
-  return lsp.diagnosticsFor(props.tab.path).map((item) => {
+  const toCm = (item: {
+    line: number
+    column: number
+    endLine: number
+    endColumn: number
+    severity: string
+    message: string
+    source: string
+  }) => {
     const from = offsetAt(doc, item.line, item.column)
     const to = Math.max(from + 1, offsetAt(doc, item.endLine, item.endColumn))
     return {
       from: Math.min(from, doc.length),
       to: Math.min(to, doc.length),
-      severity: item.severity === 'hint' ? 'info' : item.severity,
+      severity: (item.severity === 'hint' ? 'info' : item.severity) as CmDiagnostic['severity'],
       message: item.message,
       source: item.source || 'lsp'
     }
-  })
+  }
+  return [
+    ...lsp.diagnosticsFor(props.tab.path).map(toCm),
+    ...format.issuesFor(props.tab.path).map(toCm)
+  ]
+}
+
+/**
+ * Push the stored diagnostics into the lint state. `forceLinting` only
+ * reschedules a lint that is already pending, so it does nothing once the
+ * initial run has finished — external diagnostics (language server pushes and
+ * lint-on-save results) have to be applied with `setDiagnostics` instead.
+ */
+function refreshDiagnostics() {
+  if (!view) return
+  view.dispatch(setDiagnostics(view.state, cmDiagnostics()))
 }
 
 function scheduleSync() {
@@ -633,13 +657,18 @@ watch(themes.active, () => {
   view?.dispatch({ effects: highlightCompartment.reconfigure(activeHighlight()) })
 })
 
-// Language servers publish diagnostics asynchronously; re-run the linter so
+// Language servers publish diagnostics asynchronously and lint-on-save fills
+// the linter store after the fact; push both straight into the lint state so
 // squiggles and the gutter update without waiting for the next edit.
 watch(
   () => lsp.diagnostics.value[props.tab.path],
-  () => {
-    if (view) forceLinting(view)
-  }
+  () => refreshDiagnostics()
+)
+
+watch(
+  () => format.issues.value[props.tab.path],
+  () => refreshDiagnostics(),
+  { deep: true }
 )
 
 watch(
