@@ -10,6 +10,7 @@ export function useKeybindings() {
   const debug = useDebug()
   const tests = useTests()
   const tasks = useTasks()
+  const intel = useCodeIntel()
   const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   let chord: string | null = null
   let chordTimer: ReturnType<typeof setTimeout> | null = null
@@ -36,6 +37,7 @@ export function useKeybindings() {
       database.consoleOpen.value = false
       return true
     }
+    if (intel.dismiss()) return true
     if (ide.palette.value.mode !== 'none') {
       ide.palette.value = { mode: 'none' }
       return true
@@ -53,10 +55,19 @@ export function useKeybindings() {
       return
     }
 
+    // Code intelligence shortcuts: F2 renames, Shift+F12 finds references.
+    if (event.key === 'F2' || (event.key === 'F12' && event.shiftKey)) {
+      if (ide.settingsOpen.value || ide.palette.value.mode !== 'none' || intel.anyOpen.value) return
+      event.preventDefault()
+      if (event.key === 'F2') void intel.openRename()
+      else void intel.openReferences()
+      return
+    }
+
     // Debugger function keys work without a modifier, so they are handled
     // before the Ctrl/Cmd gate below.
     if (event.key === 'F5' || event.key === 'F9' || event.key === 'F10' || event.key === 'F11') {
-      if (ide.settingsOpen.value || ide.palette.value.mode !== 'none') {
+      if (ide.settingsOpen.value || ide.palette.value.mode !== 'none' || intel.anyOpen.value) {
         return
       }
       event.preventDefault()
@@ -113,6 +124,20 @@ export function useKeybindings() {
         if (ide.activePath.value) ide.closeTab(ide.activePath.value, ide.activeGroupId.value)
         return
       }
+    }
+
+    if (key === '.' || code === 'Period') {
+      if (ide.settingsOpen.value || ide.palette.value.mode !== 'none' || intel.anyOpen.value) return
+      event.preventDefault()
+      void intel.openActions()
+      return
+    }
+
+    if (shift && key === 'o') {
+      if (ide.settingsOpen.value || ide.palette.value.mode !== 'none' || intel.anyOpen.value) return
+      event.preventDefault()
+      void intel.openSymbols()
+      return
     }
 
     if (key === 'k' && !shift) {

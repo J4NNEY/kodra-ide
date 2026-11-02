@@ -15,6 +15,50 @@ export interface LspDiagnostic {
   source: string
 }
 
+/** A location in a file, normalised to 1-based line/column. */
+export interface LspLocation {
+  path: string
+  line: number
+  column: number
+  endLine: number
+  endColumn: number
+}
+
+/** One entry of the document outline (flattened, with nesting depth). */
+export interface LspSymbol {
+  name: string
+  detail: string
+  kind: string
+  line: number
+  column: number
+  depth: number
+}
+
+export interface LspRenameTarget {
+  line: number
+  column: number
+  endLine: number
+  endColumn: number
+  placeholder: string
+}
+
+export interface LspCodeAction {
+  title: string
+  kind: string
+  preferred: boolean
+  edit: any | null
+  command: any | null
+  data: any | null
+  raw: any
+}
+
+export interface AppliedEditSummary {
+  files: string[]
+  edits: number
+  skipped: number
+  written: number
+}
+
 interface ServerSpec {
   name: string
   languages: string[]
@@ -90,6 +134,7 @@ const SEVERITY: Record<number, LspDiagnostic['severity']> = {
 }
 
 const KIND: Record<number, string> = {
+  1: 'file',
   2: 'method',
   3: 'function',
   4: 'function',
@@ -113,7 +158,15 @@ const KIND: Record<number, string> = {
   22: 'struct',
   23: 'keyword',
   24: 'keyword',
-  25: 'variable'
+  25: 'variable',
+  26: 'type'
+}
+
+const SEVERITY_CODE: Record<LspDiagnostic['severity'], number> = {
+  error: 1,
+  warning: 2,
+  info: 3,
+  hint: 4
 }
 
 // Module state: one server session per language for the whole app.
@@ -157,6 +210,85 @@ function toMarkdown(contents: unknown): string {
     if (typeof record.value === 'string') return record.value
   }
   return ''
+}
+
+function rangeToLocation(path: string, range: any): LspLocation {
+  return {
+    path,
+    line: (range?.start?.line ?? 0) + 1,
+    column: (range?.start?.character ?? 0) + 1,
+    endLine: (range?.end?.line ?? range?.start?.line ?? 0) + 1,
+    endColumn: (range?.end?.character ?? range?.start?.character ?? 0) + 1
+  }
+}
+
+/** Accept both `Location` and `LocationLink` shapes. */
+function locationFrom(item: any): LspLocation | null {
+  if (!item) return null
+  const uri = item.uri ?? item.targetUri
+  const range = item.range ?? item.targetSelectionRange ?? item.targetRange
+  if (!uri || !range) return null
+  return rangeToLocation(uriToPath(String(uri)), range)
+}
+
+function collectSymbols(items: unknown, depth: number, out: LspSymbol[]): void {
+  if (!Array.isArray(items)) return
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue
+    const record = item as Record<string, any>
+    if (record.location) {
+      // `SymbolInformation` (flat, with a location instead of a range).
+      const location = locationFrom(record)
+      if (!location) continue
+      out.push({
+        name: String(record.name ?? ''),
+        detail: String(record.containerName ?? ''),
+        kind: KIND[record.kind as number] ?? 'symbol',
+        line: location.line,
+        column: location.column,
+        depth
+      })
+      continue
+    }
+    const range = record.selectionRange ?? record.range
+    out.push({
+      name: String(record.name ?? ''),
+      detail: String(record.detail ?? ''),
+      kind: KIND[record.kind as number] ?? 'symbol',
+      line: (range?.start?.line ?? 0) + 1,
+      column: (range?.start?.character ?? 0) + 1,
+      depth
+    })
+    if (record.children) collectSymbols(record.children, depth + 1, out)
+  }
+}
+
+/** LSP positions are UTF-16 code units, exactly like JavaScript string indices. */
+function offsetAtText(text: string, line: number, character: number): number {
+  let index = 0
+  let current = 0
+  while (current < line) {
+    const next = text.indexOf('\n', index)
+    if (next < 0) return text.length
+    index = next + 1
+    current++
+  }
+  const end = text.indexOf('\n', index)
+  const limit = end < 0 ? text.length : end
+  return Math.min(limit, index + Math.max(0, character))
+}
+
+function textEditOffsets(edit: any, text: string): [number, number] {
+  if (!edit?.range) {
+    const at = edit?.position
+      ? offsetAtText(text, edit.position.line ?? 0, edit.position.character ?? 0)
+      : 0
+    return [at, at]
+  }
+  return [
+    offsetAtText(text, edit.range.start?.line ?? 0, edit.range.start?.character ?? 0),
+    offsetAtText(text, edit.range.end?.line ?? 0, edit.range.end?.character ?? 0)
+  ]
 }
 
 export function useLsp() {
@@ -276,6 +408,110 @@ export function useLsp() {
         [entry[0]]: { ...entry[1], status: 'failed', error: payload.error }
       }
     })
+    // `workspace/applyEdit` is a request *from* the server (assists, organize
+    // imports, some rename flows). Apply it to the buffers and answer so the
+    // server never waits forever.
+    await listenEvent<{ sessionId: string; requestId: number; params: any }>(
+      'lsp:apply-edit',
+      async (payload) => {
+        let applied = false
+        let reason = ''
+        try {
+          const summary = await applyWorkspaceEdit(payload.params?.edit)
+          applied = summary.edits > 0
+          if (!applied) reason = 'The edit did not change any file'
+        } catch (error) {
+          reason = String(error)
+        }
+        try {
+          await call('lsp_respond', {
+            id: payload.sessionId,
+            requestId: payload.requestId,
+            result: applied ? { applied: true } : { applied: false, failureReason: reason }
+          })
+        } catch {
+          /* session already gone */
+        }
+      }
+    )
+  }
+
+  /**
+   * Apply a `WorkspaceEdit` to open buffers (marking them dirty) or to disk for
+   * files that are not open. Returns a small summary for the status toast.
+   *
+   * File operations (create/rename/delete) are counted as skipped: none of the
+   * built-in actions need them, and doing them blindly would be destructive.
+   */
+  async function applyWorkspaceEdit(edit: any): Promise<AppliedEditSummary> {
+    const summary: AppliedEditSummary = { files: [], edits: 0, skipped: 0, written: 0 }
+    if (!edit) return summary
+
+    const grouped = new Map<string, any[]>()
+    const add = (uri: unknown, edits: unknown) => {
+      if (!uri || !Array.isArray(edits)) return
+      const path = uriToPath(String(uri))
+      grouped.set(path, [...(grouped.get(path) ?? []), ...edits])
+    }
+
+    if (edit.changes && typeof edit.changes === 'object') {
+      for (const [uri, edits] of Object.entries(edit.changes)) add(uri, edits)
+    }
+    if (Array.isArray(edit.documentChanges)) {
+      for (const change of edit.documentChanges) {
+        if (change?.textDocument?.uri && Array.isArray(change.edits)) {
+          add(change.textDocument.uri, change.edits)
+        } else {
+          summary.skipped++
+        }
+      }
+    }
+
+    for (const [path, edits] of grouped) {
+      if (!edits.length) continue
+      const tab = ide.tabs.value.find((item) => item.path === path)
+      let text = tab?.content
+      if (typeof text !== 'string') {
+        try {
+          const file = await call<{ text: string }>('read_file', { path })
+          text = file.text
+        } catch {
+          summary.skipped++
+          continue
+        }
+      }
+
+      // Applying from the end keeps every earlier offset valid.
+      const ordered = edits
+        .map((item) => {
+          const [from, to] = textEditOffsets(item, text as string)
+          return { from, to, newText: String(item?.newText ?? '') }
+        })
+        .filter((item) => item.from <= item.to)
+        .sort((a, b) => b.from - a.from || b.to - a.to)
+
+      let next = text
+      for (const item of ordered) {
+        next = next.slice(0, item.from) + item.newText + next.slice(item.to)
+      }
+      if (next === text) continue
+
+      if (tab) {
+        ide.updateContent(path, next)
+      } else {
+        try {
+          await call('write_file', { path, text: next })
+          summary.written++
+        } catch {
+          summary.skipped++
+          continue
+        }
+      }
+      summary.files.push(path)
+      summary.edits += ordered.length
+    }
+
+    return summary
   }
 
   async function ensureServer(language: string): Promise<string | null> {
@@ -431,23 +667,34 @@ export function useLsp() {
     await closeDocument(path)
   }
 
-  async function request<T>(path: string, method: string, line: number, column: number, text?: string) {
+  /** Ensure the server and document are ready, then send one JSON-RPC request. */
+  async function send<T>(
+    path: string,
+    method: string,
+    params: any,
+    text?: string
+  ): Promise<T | null> {
     const languageId = languageFor(path)
     const id = await ensureServer(languageId)
     if (!id) return null
     if (typeof text === 'string') await openDocument(path, languageId, text)
     try {
-      return await call<T>('lsp_request', {
-        id,
-        method,
-        params: {
-          textDocument: { uri: pathToUri(path) },
-          position: { line: Math.max(0, line), character: Math.max(0, column) }
-        }
-      })
+      return await call<T>('lsp_request', { id, method, params })
     } catch {
       return null
     }
+  }
+
+  async function request<T>(path: string, method: string, line: number, column: number, text?: string) {
+    return send<T>(
+      path,
+      method,
+      {
+        textDocument: { uri: pathToUri(path) },
+        position: { line: Math.max(0, line), character: Math.max(0, column) }
+      },
+      text
+    )
   }
 
   async function complete(
@@ -509,8 +756,165 @@ export function useLsp() {
   ): Promise<{ path: string; line: number } | null> {
     const result = await request<any>(path, 'textDocument/definition', line, column, text)
     const first = Array.isArray(result) ? result[0] : result
-    if (!first?.uri) return null
-    return { path: uriToPath(String(first.uri)), line: (first.range?.start?.line ?? 0) + 1 }
+    const location = locationFrom(first)
+    return location ? { path: location.path, line: location.line } : null
+  }
+
+  /** Every reference to the symbol at a position, including its declaration. */
+  async function references(
+    path: string,
+    line: number,
+    column: number,
+    text?: string
+  ): Promise<LspLocation[]> {
+    const result = await send<any[]>(
+      path,
+      'textDocument/references',
+      {
+        textDocument: { uri: pathToUri(path) },
+        position: { line: Math.max(0, line), character: Math.max(0, column) },
+        context: { includeDeclaration: true }
+      },
+      text
+    )
+    const out: LspLocation[] = []
+    const seen = new Set<string>()
+    for (const item of Array.isArray(result) ? result : []) {
+      const location = locationFrom(item)
+      if (!location) continue
+      const key = `${location.path}:${location.line}:${location.column}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(location)
+    }
+    return out
+  }
+
+  /** Outline of the file. `DocumentSymbol[]` and `SymbolInformation[]` both work. */
+  async function documentSymbols(path: string, text?: string): Promise<LspSymbol[]> {
+    const result = await send<any>(path, 'textDocument/documentSymbol', {
+      textDocument: { uri: pathToUri(path) }
+    }, text)
+    const out: LspSymbol[] = []
+    collectSymbols(result, 0, out)
+    return out
+  }
+
+  /** The range the server would rename at a position, plus its suggested name. */
+  async function prepareRename(
+    path: string,
+    line: number,
+    column: number,
+    text?: string
+  ): Promise<LspRenameTarget | null> {
+    const result = await send<any>(
+      path,
+      'textDocument/prepareRename',
+      {
+        textDocument: { uri: pathToUri(path) },
+        position: { line: Math.max(0, line), character: Math.max(0, column) }
+      },
+      text
+    )
+    if (!result) return null
+    const range = result.range ?? result
+    if (!range?.start) return null
+    const location = rangeToLocation(path, range)
+    return {
+      line: location.line,
+      column: location.column,
+      endLine: location.endLine,
+      endColumn: location.endColumn,
+      placeholder: typeof result.placeholder === 'string' ? result.placeholder : ''
+    }
+  }
+
+  async function rename(
+    path: string,
+    line: number,
+    column: number,
+    newName: string,
+    text?: string
+  ): Promise<any | null> {
+    return send<any>(
+      path,
+      'textDocument/rename',
+      {
+        textDocument: { uri: pathToUri(path) },
+        position: { line: Math.max(0, line), character: Math.max(0, column) },
+        newName
+      },
+      text
+    )
+  }
+
+  function normaliseAction(item: any): LspCodeAction {
+    return {
+      title: String(item?.title ?? 'Code action'),
+      kind: String(item?.kind ?? ''),
+      preferred: !!item?.preferred,
+      edit: item?.edit ?? null,
+      command: item?.command ?? null,
+      data: item?.data ?? null,
+      raw: item
+    }
+  }
+
+  /** Quick fixes / refactors for a 0-based range. */
+  async function codeActions(
+    path: string,
+    line: number,
+    column: number,
+    endLine: number,
+    endColumn: number,
+    text?: string
+  ): Promise<LspCodeAction[]> {
+    const onLine = (item: LspDiagnostic) =>
+      item.line - 1 <= endLine && item.endLine - 1 >= line
+    const contextDiagnostics = diagnosticsFor(path)
+      .filter(onLine)
+      .map((item) => ({
+        range: {
+          start: { line: item.line - 1, character: item.column - 1 },
+          end: {
+            line: item.endLine - 1,
+            character: Math.max(item.column, item.endColumn) - 1
+          }
+        },
+        severity: SEVERITY_CODE[item.severity],
+        message: item.message,
+        source: item.source || undefined
+      }))
+    const result = await send<any[]>(
+      path,
+      'textDocument/codeAction',
+      {
+        textDocument: { uri: pathToUri(path) },
+        range: {
+          start: { line: Math.max(0, line), character: Math.max(0, column) },
+          end: { line: Math.max(line, endLine), character: Math.max(0, endColumn) }
+        },
+        context: { diagnostics: contextDiagnostics }
+      },
+      text
+    )
+    return (Array.isArray(result) ? result : []).map(normaliseAction)
+  }
+
+  /** Some servers defer the edit until the action is resolved. */
+  async function resolveCodeAction(
+    path: string,
+    action: LspCodeAction,
+    text?: string
+  ): Promise<LspCodeAction> {
+    if (action.edit || action.data === null || action.data === undefined) return action
+    const resolved = await send<any>(path, 'codeAction/resolve', action.raw, text)
+    return resolved ? normaliseAction({ ...action.raw, ...resolved }) : action
+  }
+
+  async function executeCommand(path: string, command: any, text?: string): Promise<any | null> {
+    if (!command) return null
+    return send<any>(path, 'workspace/executeCommand', command, text)
   }
 
   /** Completion source bound to one file, used by the CodeMirror editor. */
@@ -563,6 +967,14 @@ export function useLsp() {
     complete,
     completionSource,
     hover,
-    definition
+    definition,
+    references,
+    documentSymbols,
+    prepareRename,
+    rename,
+    codeActions,
+    resolveCodeAction,
+    executeCommand,
+    applyWorkspaceEdit
   }
 }

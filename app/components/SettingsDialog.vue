@@ -182,7 +182,7 @@ async function checkUpdates() {
   try {
     updateInfo.value = await call<UpdateCheck>('update_check', {
       feedUrl: draft.value.updateFeed,
-      current: appInfo.value?.version ?? '0.9.0'
+      current: appInfo.value?.version ?? '0.10.0'
     })
     if (!updateInfo.value.available) ide.notify('Kudo is up to date', 'success')
   } catch (err) {
@@ -263,7 +263,7 @@ watch(
       <div class="modal settings-modal">
         <div class="modal-head">
           <h2>Settings</h2>
-          <span class="hint">Kudo {{ appInfo?.version ?? '0.9.0' }}</span>
+          <span class="hint">Kudo {{ appInfo?.version ?? '0.10.0' }}</span>
           <div style="flex: 1" />
           <button class="icon-btn" @click="close"><X :size="15" /></button>
         </div>
@@ -717,7 +717,7 @@ watch(
               <div class="about">
                 <div class="empty-mark" style="width: 52px; height: 52px; font-size: 22px">K</div>
                 <div>
-                  <h3 style="margin: 0 0 2px">Kudo {{ appInfo?.version ?? '0.9.0' }}</h3>
+                  <h3 style="margin: 0 0 2px">Kudo {{ appInfo?.version ?? '0.10.0' }}</h3>
                   <p class="hint" style="margin: 0">
                     A clean-room desktop IDE built with Tauri v2, Nuxt 3 and Rust.
                   </p>
@@ -749,7 +749,7 @@ watch(
 
                 <div v-if="updateInfo?.available" class="update-body">
                   <div class="row" style="justify-content: space-between">
-                    <span class="mono">{{ appInfo?.version ?? '0.9.0' }} → {{ updateInfo.latestVersion }}</span>
+                    <span class="mono">{{ appInfo?.version ?? '0.10.0' }} → {{ updateInfo.latestVersion }}</span>
                     <span class="hint">{{ updateInfo.publishedAt }}</span>
                   </div>
                   <pre v-if="updateInfo.notes" class="update-notes">{{ updateInfo.notes }}</pre>

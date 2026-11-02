@@ -1236,6 +1236,66 @@ textarea.input {
   color: var(--text-faint);
   font-size: 12px;
 }
+
+/* Code intelligence dialogs (rename, code actions) */
+.intel-dialog {
+  width: min(480px, 92vw);
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.intel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.intel-head kbd {
+  margin-left: auto;
+}
+.intel-sub {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+.intel-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  outline: none;
+}
+.intel-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.intel-input.invalid {
+  border-color: var(--danger, #e5484d);
+}
+.intel-error {
+  font-size: 11.5px;
+  color: var(--danger, #e5484d);
+}
+.intel-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.intel-foot .hint {
+  flex: 1;
+}
 kbd {
   font-family: var(--font-ui);
   font-size: 10px;

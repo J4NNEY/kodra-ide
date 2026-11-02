@@ -151,6 +151,20 @@ fn spawn_reader(app: AppHandle, id: String, session: Arc<LspSession>, stdout: Ch
                                 .unwrap_or(0);
                             Value::Array(vec![Value::Null; count])
                         }
+                        "workspace/applyEdit" => {
+                            // The edit must touch real buffers, which only the
+                            // frontend can do. It answers through `lsp_respond`.
+                            let params = message.get("params").cloned().unwrap_or(Value::Null);
+                            let _ = app.emit(
+                                "lsp:apply-edit",
+                                json!({
+                                    "sessionId": id,
+                                    "requestId": reply_id,
+                                    "params": params
+                                }),
+                            );
+                            continue;
+                        }
                         _ => Value::Null,
                     };
                     let reply = json!({ "jsonrpc": "2.0", "id": reply_id, "result": result });
@@ -229,7 +243,8 @@ pub async fn lsp_start(
                 "capabilities": {
                     "workspace": {
                         "workspaceFolders": true,
-                        "configuration": true
+                        "configuration": true,
+                        "applyEdit": true
                     },
                     "textDocument": {
                         "synchronization": { "didSave": true, "dynamicRegistration": false },
@@ -243,10 +258,31 @@ pub async fn lsp_start(
                         "hover": { "contentFormat": ["markdown", "plaintext"] },
                         "definition": { "linkSupport": true },
                         "references": { "dynamicRegistration": false },
+                        "documentSymbol": { "hierarchicalDocumentSymbolSupport": true },
+                        "rename": { "prepareSupport": true },
+                        "codeAction": {
+                            "codeActionLiteralSupport": {
+                                "codeActionKind": {
+                                    "valueSet": [
+                                        "",
+                                        "quickfix",
+                                        "refactor",
+                                        "refactor.extract",
+                                        "refactor.inline",
+                                        "refactor.rewrite",
+                                        "source",
+                                        "source.organizeImports",
+                                        "source.fixAll"
+                                    ]
+                                }
+                            },
+                            "isPreferredSupport": true,
+                            "resolveSupport": { "properties": ["edit"] }
+                        },
                         "publishDiagnostics": { "relatedInformation": true }
                     }
                 },
-                "clientInfo": { "name": "kudo", "version": "0.1.0" }
+                "clientInfo": { "name": "kudo", "version": env!("CARGO_PKG_VERSION") }
             }),
         )
         .await
@@ -328,6 +364,37 @@ pub async fn lsp_notify(
     session
         .notify(&method, params.unwrap_or_else(|| json!({})))
         .await
+}
+
+/// Answer a server-initiated request (currently `workspace/applyEdit`).
+#[tauri::command]
+pub async fn lsp_respond(
+    id: String,
+    request_id: i64,
+    result: Option<Value>,
+    error: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let session = {
+        let servers = state.lsp.lock().await;
+        servers
+            .get(&id)
+            .cloned()
+            .ok_or("language server is not connected")?
+    };
+    let reply = match error {
+        Some(message) => json!({
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": { "code": -32603, "message": message }
+        }),
+        None => json!({
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": result.unwrap_or(Value::Null)
+        }),
+    };
+    session.send(&reply).await
 }
 
 /// Report which well-known language servers exist on this machine.

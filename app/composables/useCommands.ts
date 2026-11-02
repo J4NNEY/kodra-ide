@@ -24,6 +24,8 @@ export function useCommands() {
   const tests = useTests()
   const tasks = useTasks()
   const format = useFormat()
+  const intel = useCodeIntel()
+  const lsp = useLsp()
   const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   const extensions = useExtensions()
   const themes = useThemes()
@@ -421,6 +423,50 @@ export function useCommands() {
         const list = found.filter((tool) => tool.path).map((tool) => tool.label)
         ide.notify(
           list.length ? `Formatters and linters: ${list.join(', ')}` : 'No formatters or linters found',
+          list.length ? 'success' : 'info'
+        )
+      }
+    },
+    {
+      id: 'code.rename',
+      label: 'Code: Rename Symbol',
+      group: 'Code',
+      hint: 'F2',
+      run: () => intel.openRename()
+    },
+    {
+      id: 'code.references',
+      label: 'Code: Find All References',
+      group: 'Code',
+      hint: 'Shift+F12',
+      run: () => intel.openReferences()
+    },
+    {
+      id: 'code.symbols',
+      label: 'Code: Go to Symbol in File…',
+      group: 'Code',
+      hint: 'Ctrl+Shift+O',
+      run: () => intel.openSymbols()
+    },
+    {
+      id: 'code.actions',
+      label: 'Code: Quick Fix / Code Actions',
+      group: 'Code',
+      hint: 'Ctrl+.',
+      run: () => intel.openActions()
+    },
+    {
+      id: 'code.restart',
+      label: 'Code: Restart Language Servers',
+      group: 'Code',
+      run: async () => {
+        lsp.reset()
+        const found = await lsp.detect()
+        const list = Object.keys(found)
+        ide.notify(
+          list.length
+            ? `Language servers detected: ${list.join(', ')}`
+            : 'No language servers detected',
           list.length ? 'success' : 'info'
         )
       }

@@ -4,7 +4,7 @@ Panduan langkah demi langkah untuk menjalankan project `sokudo-clone` di mesin l
 aplikasi desktop Tauri maupun sebagai preview browser.
 
 - **Hasil akhir** yang diuji: Windows 11, Node 26.12.1, pnpm 9.15.0, Rust 1.96.0.
-- **Versi project** saat dokumen ini ditulis: `0.9.0`.
+- **Versi project** saat dokumen ini ditulis: `0.10.0`.
 - Semua perintah dijalankan dari folder project:
 
 ```powershell
@@ -166,6 +166,18 @@ Dideteksi dari `PATH`:
 | Svelte | `svelte-language-server` | `npm i -g svelte-language-server` |
 | JSON | `vscode-json-language-server` | `npm i -g vscode-langservers-extracted` |
 | Shell | `bash-language-server` | `npm i -g bash-language-server` |
+
+Sejak 0.10.0, selain completion/hover/go-to-definition, Kudo memakai server yang sama untuk:
+
+| Aksi | Shortcut | Command palette |
+| --- | --- | --- |
+| Rename symbol | `F2` | `Code: Rename Symbol` |
+| Cari semua referensi | `Shift+F12` | `Code: Find All References` |
+| Outline / symbol picker file | `Ctrl+Shift+O` | `Code: Go to Symbol in File...` |
+| Quick fix / code action | `Ctrl+.` | `Code: Quick Fix / Code Actions` |
+
+Rename mengubah buffer tab yang terbuka (tetap dirty sampai disimpan) dan langsung menulis file yang
+tidak sedang dibuka. Kalau server terlihat macet, jalankan `Code: Restart Language Servers`.
 
 ### Debug adapter (DAP)
 

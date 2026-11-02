@@ -99,6 +99,7 @@ pub fn run() {
             commands::lsp::lsp_stop,
             commands::lsp::lsp_request,
             commands::lsp::lsp_notify,
+            commands::lsp::lsp_respond,
             commands::lsp::lsp_complete,
             commands::lsp::lsp_sessions,
             commands::lsp::lsp_detect,

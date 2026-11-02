@@ -14,6 +14,9 @@ const extensions = useExtensions()
 // Overlays and heavy panes are split out of the entry bundle.
 const CommandPalette = defineAsyncComponent(() => import('./components/CommandPalette.vue'))
 const QuickOpen = defineAsyncComponent(() => import('./components/QuickOpen.vue'))
+const RenameDialog = defineAsyncComponent(() => import('./components/RenameDialog.vue'))
+const SymbolList = defineAsyncComponent(() => import('./components/SymbolList.vue'))
+const CodeActionMenu = defineAsyncComponent(() => import('./components/CodeActionMenu.vue'))
 const SettingsDialog = defineAsyncComponent(() => import('./components/SettingsDialog.vue'))
 const BrowserOverlay = defineAsyncComponent(() => import('./components/BrowserOverlay.vue'))
 const sidebarWidth = useLayoutSize('sidebar-width', 268, 200, 520)
@@ -123,6 +126,9 @@ useHead({ title: () => (ide.workspace.value ? `${ide.workspace.value.name} — K
 
   <CommandPalette />
   <QuickOpen />
+  <RenameDialog />
+  <SymbolList />
+  <CodeActionMenu />
   <SettingsDialog />
   <BrowserOverlay />
   <ToastHost />

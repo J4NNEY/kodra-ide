@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.10.0 — 2026-11-02
+
+Kudo's language servers now do more than complete and jump: they rename, find references, outline
+the file and offer quick fixes.
+
+- **Rename Symbol** — `F2` asks `textDocument/prepareRename` for the range and suggested name, shows
+  a small dialog, then applies the returned `WorkspaceEdit`. Open tabs are edited in place and stay
+  dirty; files that are not open are written directly, and the toast reports how many files changed.
+- **Find All References** — `Shift+F12` lists `textDocument/references` with file, line/column and a
+  preview of the source line. Picking a row jumps to that location.
+- **Go to Symbol in File** — `Ctrl+Shift+O` turns `textDocument/documentSymbol` (hierarchical or flat)
+  into a filterable outline with nesting depth; Enter jumps to the symbol.
+- **Quick Fix / Code Actions** — `Ctrl+.` sends the diagnostics covering the cursor to
+  `textDocument/codeAction`, resolves actions through `codeAction/resolve` when the server defers the
+  edit, and then applies the edit or runs `workspace/executeCommand`.
+- **Server-initiated edits** — the client now advertises `workspace.applyEdit`, forwards
+  `workspace/applyEdit` requests to the frontend and answers them, so assists and organize-import
+  actions that edit through the server work as well. Rename/documentSymbol/codeAction capabilities
+  are advertised during `initialize`.
+- **Commands** — `Code: Rename Symbol`, `Find All References`, `Go to Symbol in File…`,
+  `Quick Fix / Code Actions` and `Restart Language Servers`.
+- **Safety** — workspace edits are applied from the end of each file so earlier offsets stay valid;
+  edits to files outside the workspace are skipped instead of guessed, and resource operations
+  (create/rename/delete) are reported as skipped rather than executed.
+
 ## 0.9.0 — 2026-11-01
 
 Kudo can now format the buffer before saving and lint it afterwards.
