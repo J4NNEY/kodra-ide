@@ -4,7 +4,7 @@ Panduan langkah demi langkah untuk menjalankan project `sokudo-clone` di mesin l
 aplikasi desktop Tauri maupun sebagai preview browser.
 
 - **Hasil akhir** yang diuji: Windows 11, Node 26.12.1, pnpm 9.15.0, Rust 1.96.0.
-- **Versi project** saat dokumen ini ditulis: `0.12.0`.
+- **Versi project** saat dokumen ini ditulis: `0.12.1`.
 - Semua perintah dijalankan dari folder project:
 
 ```powershell
@@ -93,6 +93,10 @@ Yang perlu diketahui:
   file tidak benar-benar dibaca/ditulis.
 - Hot reload berjalan; simpan file dan UI langsung berubah.
 - Hentikan dengan `Ctrl+C`.
+- **Pane Browser** tidak akan memuat `http://localhost:3000` karena itu origin Kudo sendiri; alamat
+  tersebut menampilkan panel peringatan dan tombol *Open in system browser*. Arahkan preview ke dev
+  server aplikasi lain (mis. `http://localhost:5173`), atau isi *Browser preview home* di
+  **Settings → Integrations**.
 
 ## 4. Jalankan aplikasi desktop (`pnpm desktop`)
 

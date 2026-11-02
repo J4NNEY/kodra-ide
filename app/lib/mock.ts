@@ -276,7 +276,7 @@ const defaultSettings: Settings = {
   ],
   mcpServers: [],
   updateFeed: '',
-  browserHome: 'http://localhost:3000'
+  browserHome: ''
 }
 
 function loadSettings(): Settings {
@@ -284,11 +284,14 @@ function loadSettings(): Settings {
     const raw = localStorage.getItem('kudo:settings')
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Settings>
-      return {
+      const settings: Settings = {
         ...defaultSettings,
         ...parsed,
         ai: { ...defaultSettings.ai, ...(parsed.ai ?? {}) }
       }
+      // Legacy default from <= 0.12.0 embedded Kudo's own dev server.
+      if (settings.browserHome.trim() === 'http://localhost:3000') settings.browserHome = ''
+      return settings
     }
   } catch {
     /* ignore */

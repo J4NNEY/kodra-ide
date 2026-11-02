@@ -42,6 +42,17 @@ const showHeaders = ref(false)
 
 const canBack = computed(() => browser.index.value > 0)
 const canForward = computed(() => browser.index.value < browser.history.value.length - 1)
+const hasUrl = computed(() => Boolean(browser.url.value))
+const canPreview = computed(() => hasUrl.value && !browser.isSelfUrl.value)
+const configuredHome = computed(() => ide.settings.value.browserHome?.trim() ?? '')
+const configuredHomeIsSelf = computed(() => {
+  if (!configuredHome.value || !import.meta.client) return false
+  try {
+    return new URL(configuredHome.value).origin === window.location.origin
+  } catch {
+    return false
+  }
+})
 const prettyBody = computed(() => {
   const body = response.value?.body ?? ''
   if (!body) return ''
@@ -80,14 +91,24 @@ watch(
 )
 
 function go() {
+  if (!address.value.trim()) return
   browser.navigate(address.value)
-  browser.loading.value = true
+}
+
+function useHome() {
+  browser.home()
+  if (!configuredHome.value) addressInput.value?.focus()
+}
+
+function focusAddress() {
+  addressInput.value?.focus()
+  addressInput.value?.select()
 }
 
 function openExternal(target?: string) {
-  call('browser_open_external', { url: target ?? browser.url.value }).catch((err) =>
-    ide.notify(String(err), 'error')
-  )
+  const dest = target ?? browser.url.value
+  if (!dest) return
+  call('browser_open_external', { url: dest }).catch((err) => ide.notify(String(err), 'error'))
 }
 
 function parseHeaders(raw: string): [string, string][] {
@@ -186,7 +207,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
             v-model="address"
             class="address-input"
             spellcheck="false"
-            placeholder="http://localhost:3000"
+            placeholder="Enter a URL, e.g. http://localhost:5173"
             @keydown.enter.prevent="go"
           />
           <Loader2 v-if="browser.loading.value && tab === 'preview'" :size="12" class="spin" />
@@ -197,10 +218,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
           <button :class="{ active: tab === 'request' }" @click="setTab('request')">Request</button>
         </div>
 
-        <button class="icon-btn" title="Set as home" @click="ide.settings.value.browserHome = browser.url.value; ide.notify('Browser home updated', 'success')">
+        <button
+          class="icon-btn"
+          :disabled="!canPreview"
+          :title="canPreview ? 'Set as home' : hasUrl ? 'Kudo cannot use its own address as home' : 'Open a page first'"
+          @click="ide.settings.value.browserHome = browser.url.value; ide.notify('Browser home updated', 'success')"
+        >
           <Settings2 :size="13" />
         </button>
-        <button class="icon-btn" title="Open in system browser" @click="openExternal()">
+        <button
+          class="icon-btn"
+          :disabled="!hasUrl"
+          title="Open in system browser"
+          @click="openExternal()"
+        >
           <ExternalLink :size="13" />
         </button>
         <button class="icon-btn" title="Close (Esc)" @click="browser.hide()">
@@ -209,7 +240,51 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
       </div>
 
       <div v-show="tab === 'preview'" class="preview-body">
+        <div v-if="!hasUrl" class="preview-empty">
+          <div class="empty-card">
+            <span class="empty-badge"><Globe :size="22" /></span>
+            <h2>Preview a running app</h2>
+            <p>
+              Type a URL in the address bar to show a dev server, docs page or local build
+              inside Kudo.
+            </p>
+            <div class="empty-actions">
+              <button class="btn primary sm" @click="focusAddress">Enter URL</button>
+              <button
+                v-if="configuredHome && !configuredHomeIsSelf"
+                class="btn ghost sm"
+                @click="useHome"
+              >
+                Open home page
+              </button>
+            </div>
+            <p class="empty-hint">
+              Kudo never loads its own address here — that would nest the whole IDE inside the
+              pane.
+            </p>
+          </div>
+        </div>
+
+        <div v-else-if="browser.isSelfUrl.value" class="preview-empty">
+          <div class="empty-card warn">
+            <span class="empty-badge"><Globe :size="22" /></span>
+            <h2>This address is Kudo itself</h2>
+            <p>
+              <code>{{ browser.url.value }}</code> is the origin this IDE is served from. Loading
+              it would embed Kudo inside Kudo, so the pane stays empty.
+            </p>
+            <div class="empty-actions">
+              <button class="btn primary sm" @click="openExternal()">
+                <ExternalLink :size="12" />
+                Open in system browser
+              </button>
+              <button class="btn ghost sm" @click="focusAddress">Use another URL</button>
+            </div>
+          </div>
+        </div>
+
         <iframe
+          v-else
           :key="browser.reloadKey.value"
           :src="browser.url.value"
           class="preview-frame"
@@ -218,7 +293,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
           @load="browser.loading.value = false"
         />
         <div class="preview-foot">
-          <span class="hint">{{ browser.url.value }}</span>
+          <span class="hint">{{ hasUrl ? browser.url.value : 'No page loaded' }}</span>
           <div style="flex: 1" />
           <span class="hint">Frames blocked by the site? Use “Open in system browser”.</span>
         </div>
@@ -399,6 +474,72 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
   width: 100%;
   border: 0;
   background: #fff;
+}
+.preview-empty {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  overflow: auto;
+  background: var(--surface-0);
+}
+.empty-card {
+  width: 100%;
+  max-width: 470px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.empty-badge {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 2px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface-2);
+  color: var(--accent);
+}
+.empty-card.warn .empty-badge {
+  color: var(--orange);
+  background: color-mix(in srgb, var(--orange) 12%, var(--surface-2));
+}
+.empty-card h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.empty-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+.empty-card code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  word-break: break-all;
+}
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.empty-hint {
+  margin-top: 6px !important;
+  font-size: 11px !important;
+  color: var(--text-faint) !important;
 }
 .preview-foot {
   display: flex;

@@ -31,5 +31,5 @@ export const defaultSettings: Settings = {
   recentWorkspaces: [],
   mcpServers: [],
   updateFeed: '',
-  browserHome: 'http://localhost:3000'
+  browserHome: ''
 }

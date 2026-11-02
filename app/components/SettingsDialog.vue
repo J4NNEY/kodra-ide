@@ -687,8 +687,16 @@ watch(
 
               <div class="field">
                 <label>Browser preview home</label>
-                <input v-model="draft.browserHome" class="input" spellcheck="false" />
-                <span class="hint">Opened by the browser panel and Ctrl+Shift+B.</span>
+                <input
+                  v-model="draft.browserHome"
+                  class="input"
+                  spellcheck="false"
+                  placeholder="Leave empty to start from the Browser start panel"
+                />
+                <span class="hint">
+                  Optional. Opened by the browser panel and Ctrl+Shift+B; Kudo never embeds its
+                  own address.
+                </span>
               </div>
 
               <div class="field">

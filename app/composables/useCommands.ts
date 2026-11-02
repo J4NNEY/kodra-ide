@@ -147,9 +147,15 @@ export function useCommands() {
     },
     {
       id: 'browser.localhost',
-      label: 'Browser: Preview localhost:3000',
+      label: 'Browser: Preview Local URL…',
       group: 'Browser',
-      run: () => browser.show('http://localhost:3000')
+      run: () => {
+        const target = window.prompt(
+          'URL to preview (Kudo never loads its own address)',
+          browser.url.value || 'http://localhost:5173'
+        )
+        if (target?.trim()) browser.show(target)
+      }
     },
     {
       id: 'database.console',

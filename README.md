@@ -18,7 +18,7 @@ public screenshots and the UI is written from scratch.
 | Checkpoints | Every agent file write snapshots the previous contents first; chat replies show a Restore card with the touched files and the Agent pane lists recent changes |
 | Skills | Discovers `SKILL.md` bundles in `.kudo/skills`, `.claude/skills` and the user config dir; catalog injected into the agent prompt |
 | Database | SQLite browser (tables, schema, paging), SQL console with history, CSV export via native save dialog |
-| Browser | In-app preview overlay, address bar, request inspector run in Rust (no CORS), open in system browser |
+| Browser | In-app preview overlay with address bar, remembered last URL, self-origin guard, request inspector run in Rust (no CORS), open in system browser |
 | MCP | stdio JSON-RPC client, server presets, connect/disconnect, tool list and a tool runner |
 | LSP | Language servers on PATH (rust-analyzer, gopls, Dart, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion with auto-import edits, hover docs, go-to-definition (`F12`/`Ctrl+click`), signature help and occurrence highlighting at the cursor, semantic tokens and inline type/parameter hints, call hierarchy (`Shift+Alt+H`) and type hierarchy, rename (`F2`), references (`Shift+F12`), document symbols (`Ctrl+Shift+O`), workspace symbols (`Ctrl+T`), quick fixes (`Ctrl+.`), diagnostics as squiggles plus a Problems panel and status-bar counts |
 | Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |

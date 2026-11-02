@@ -1,6 +1,6 @@
 [package]
 name = "kudo"
-version = "0.12.0"
+version = "0.12.1"
 description = "Kudo — desktop IDE"
 authors = ["Kudo"]
 edition = "2021"

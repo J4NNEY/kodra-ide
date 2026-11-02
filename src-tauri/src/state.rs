@@ -99,7 +99,7 @@ pub struct Settings {
 }
 
 fn default_browser_home() -> String {
-    "http://localhost:3000".into()
+    String::new()
 }
 
 impl Default for Settings {
@@ -241,7 +241,13 @@ impl AppState {
 
     pub fn load_settings(&self) {
         if let Ok(raw) = std::fs::read_to_string(self.settings_path()) {
-            if let Ok(parsed) = serde_json::from_str::<Settings>(&raw) {
+            if let Ok(mut parsed) = serde_json::from_str::<Settings>(&raw) {
+                // Up to 0.12.0 the default home pointed at Kudo's own dev server,
+                // which made the Browser pane embed the IDE inside itself. Treat
+                // that legacy default as "unset" so the start panel is shown.
+                if parsed.browser_home.trim() == "http://localhost:3000" {
+                    parsed.browser_home.clear();
+                }
                 *self.settings.write() = parsed;
             }
         }

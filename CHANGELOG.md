@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.12.1 — 2026-11-02
+
+The in-app browser no longer embeds Kudo itself.
+
+- **Browser start panel** — opening the pane without a URL (or with an empty *Browser preview
+  home*) shows a short start panel instead of guessing `http://localhost:3000`. That guess embedded
+  Kudo's own Nuxt dev server in the pane whenever the IDE ran from source.
+- **Self-origin guard** — when the address resolves to the origin Kudo is served from, the pane
+  explains the problem and offers **Open in system browser** instead of rendering a second IDE
+  inside itself.
+- **Last URL remembered** — the pane restores the last previewed URL from `localStorage`;
+  **Reload** no longer rewrites the configured home, and **Set as home** is disabled until a
+  non-self page is open.
+- `Browser: Preview localhost:3000` is now **Browser: Preview Local URL…** and asks for the
+  address, so it cannot hard-code Kudo's own port.
+- The default *Browser preview home* is now empty; settings that still contain the old default
+  (`http://localhost:3000`) are cleared when they load, so the start panel appears instead.
+
 ## 0.12.0 — 2026-11-02
 
 Language servers now colour the buffer, annotate inferred types and answer hierarchy questions.
