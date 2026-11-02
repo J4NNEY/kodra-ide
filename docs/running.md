@@ -4,7 +4,7 @@ Panduan langkah demi langkah untuk menjalankan project `sokudo-clone` di mesin l
 aplikasi desktop Tauri maupun sebagai preview browser.
 
 - **Hasil akhir** yang diuji: Windows 11, Node 26.12.1, pnpm 9.15.0, Rust 1.96.0.
-- **Versi project** saat dokumen ini ditulis: `0.10.1`.
+- **Versi project** saat dokumen ini ditulis: `0.11.0`.
 - Semua perintah dijalankan dari folder project:
 
 ```powershell
@@ -168,14 +168,23 @@ Dideteksi dari `PATH`:
 | JSON | `vscode-json-language-server` | `npm i -g vscode-langservers-extracted` |
 | Shell | `bash-language-server` | `npm i -g bash-language-server` |
 
-Sejak 0.10.0, selain completion/hover/go-to-definition, Kudo memakai server yang sama untuk:
+Sejak 0.11.0, selain completion/hover/go-to-definition, Kudo memakai server yang sama untuk:
 
 | Aksi | Shortcut | Command palette |
 | --- | --- | --- |
 | Rename symbol | `F2` | `Code: Rename Symbol` |
 | Cari semua referensi | `Shift+F12` | `Code: Find All References` |
 | Outline / symbol picker file | `Ctrl+Shift+O` | `Code: Go to Symbol in File...` |
+| Cari symbol di seluruh workspace | `Ctrl+T` | `Code: Go to Symbol in Workspace...` |
 | Quick fix / code action | `Ctrl+.` | `Code: Quick Fix / Code Actions` |
+
+Signature help muncul otomatis saat mengetik `(` atau `,` di dalam pemanggilan fungsi: parameter aktif
+disorot dan dokumentasi server ditampilkan. Simbol di bawah kursor juga disorot di semua
+kemunculannya (read/write dibedakan) tanpa perlu menyeleksi kata.
+
+Completion sekarang menerapkan `textEdit` dan `additionalTextEdits` dari server. Untuk Dart, Kudo
+memanggil `completionItem/resolve` lebih dulu supaya memilih class yang belum di-import sekaligus
+menambahkan baris `import` dalam satu langkah undo.
 
 Rename mengubah buffer tab yang terbuka (tetap dirty sampai disimpan) dan langsung menulis file yang
 tidak sedang dibuka. Kalau server terlihat macet, jalankan `Code: Restart Language Servers`.
@@ -284,6 +293,9 @@ pnpm install
 | `Ctrl+,` | Settings |
 | `F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5` | debug: start, breakpoint, step over, step in, step out, stop |
 | `Ctrl+Alt+B` | jalankan default build task |
+| `F2` / `Shift+F12` | rename symbol / cari semua referensi |
+| `Ctrl+Shift+O` / `Ctrl+T` | symbol di file / symbol di seluruh workspace |
+| `Ctrl+.` | quick fix / code action |
 
 Dokumen lain: [`README.md`](../README.md) untuk ringkasan fitur dan arsitektur,
 [`docs/updater.md`](updater.md) untuk update feed.

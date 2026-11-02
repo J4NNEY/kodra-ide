@@ -1695,6 +1695,21 @@ kbd {
   margin-bottom: 0;
 }
 
+/* ---------- LSP: symbol occurrences ---------- */
+.cm-kudo-occurrence {
+  background: rgba(122, 162, 247, 0.2);
+  border-radius: 2px;
+}
+.cm-kudo-occurrence-write {
+  background: rgba(122, 162, 247, 0.34);
+  box-shadow: inset 0 -1px 0 rgba(122, 162, 247, 0.7);
+  border-radius: 2px;
+}
+.cm-kudo-occurrence-text {
+  background: rgba(122, 162, 247, 0.11);
+  border-radius: 2px;
+}
+
 .cm-lintRange-error {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 2.5 L2 0.5 L4 2.5 L6 0.5' fill='none' stroke='%23e4676b' stroke-width='1'/%3E%3C/svg%3E");
   background-repeat: repeat-x;

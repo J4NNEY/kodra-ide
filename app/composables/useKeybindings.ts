@@ -140,6 +140,13 @@ export function useKeybindings() {
       return
     }
 
+    if (key === 't' && !shift) {
+      if (ide.settingsOpen.value || ide.palette.value.mode !== 'none' || intel.anyOpen.value) return
+      event.preventDefault()
+      void intel.openWorkspaceSymbols()
+      return
+    }
+
     if (key === 'k' && !shift) {
       event.preventDefault()
       startChord('k')

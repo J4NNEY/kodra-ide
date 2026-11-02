@@ -20,10 +20,11 @@ export interface CodeIntelItem {
   line: number
   column: number
   depth: number
+  kind?: string
 }
 
 export interface CodeIntelListState {
-  mode: 'references' | 'symbols'
+  mode: 'references' | 'symbols' | 'workspace-symbols'
   title: string
   items: CodeIntelItem[]
   loading: boolean
@@ -60,6 +61,8 @@ export function useCodeIntel() {
   const rename = useState<RenameState | null>('kudo:codeintel-rename', () => null)
   const list = useState<CodeIntelListState | null>('kudo:codeintel-list', () => null)
   const actions = useState<CodeActionState | null>('kudo:codeintel-actions', () => null)
+  /** Guards workspace-symbol answers against slower earlier requests. */
+  const workspaceSeq = useState<number>('kudo:codeintel-ws-seq', () => 0)
 
   const anyOpen = computed(() => !!rename.value || !!list.value || !!actions.value)
 
@@ -277,6 +280,59 @@ export function useCodeIntel() {
     }
   }
 
+  async function openWorkspaceSymbols(): Promise<void> {
+    const tab = ide.activeTab.value
+    const language = tab && !tab.binary && lsp.isSupported(tab.language) ? tab.language : ''
+    const ready = Object.values(lsp.sessions.value).some((session) => session.status === 'ready')
+    if (!language && !ready) {
+      ide.notify('Open a supported file to search workspace symbols', 'info')
+      return
+    }
+    list.value = {
+      mode: 'workspace-symbols',
+      title: 'Workspace symbols',
+      items: [],
+      loading: true
+    }
+    // Some servers answer an empty query with everything; others (Dart) only
+    // answer real queries, so the list also re-queries while the user types.
+    await searchWorkspaceSymbols('')
+  }
+
+  /** Replace the workspace-symbol list with the server's answer for `query`. */
+  async function searchWorkspaceSymbols(query: string): Promise<void> {
+    const state = list.value
+    if (!state || state.mode !== 'workspace-symbols') return
+    const tab = ide.activeTab.value
+    const language = tab && !tab.binary && lsp.isSupported(tab.language) ? tab.language : ''
+    const seq = ++workspaceSeq.value
+    state.loading = true
+    const symbols = await lsp.workspaceSymbols(query, language)
+    if (seq !== workspaceSeq.value) return
+    const current = list.value
+    if (!current || current.mode !== 'workspace-symbols') return
+    const kept = symbols.slice(0, 1000)
+    current.loading = false
+    current.items = kept.map((symbol) => ({
+      label: symbol.name,
+      detail: symbol.detail || symbol.kind,
+      preview: relative(symbol.path),
+      path: symbol.path,
+      line: symbol.line,
+      column: symbol.column,
+      depth: 0,
+      kind: symbol.kind
+    }))
+    const term = query.trim()
+    current.title = term
+      ? kept.length
+        ? `${kept.length} symbol${kept.length === 1 ? '' : 's'} for “${term}”`
+        : `No symbols for “${term}”`
+      : kept.length
+        ? `${kept.length} workspace symbol${kept.length === 1 ? '' : 's'}`
+        : 'Workspace symbols'
+  }
+
   async function openActions(): Promise<void> {
     const target_ = target()
     if (!target_) {
@@ -378,6 +434,8 @@ export function useCodeIntel() {
     cancelRename,
     openReferences,
     openSymbols,
+    openWorkspaceSymbols,
+    searchWorkspaceSymbols,
     openActions,
     runAction,
     cancelList,

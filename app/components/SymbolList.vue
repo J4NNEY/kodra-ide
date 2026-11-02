@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
-import { FileCode2, ListTree, Search } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { Boxes, FileCode2, ListTree, Search } from 'lucide-vue-next'
 
 const ide = useIde()
 const intel = useCodeIntel()
@@ -21,6 +21,24 @@ const filtered = computed(() => {
 
 watch(filtered, () => {
   index.value = 0
+})
+
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+// Workspace symbol queries are answered by the language server, so refine the
+// list as the user types instead of relying on the initial (often empty) reply.
+watch(query, (value) => {
+  if (intel.list.value?.mode !== 'workspace-symbols') return
+  if (!value.trim()) return
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    searchTimer = null
+    void intel.searchWorkspaceSymbols(value)
+  }, 220)
+})
+
+onBeforeUnmount(() => {
+  if (searchTimer) clearTimeout(searchTimer)
 })
 
 watch(
@@ -97,8 +115,13 @@ function onKeydown(event: KeyboardEvent) {
             @mouseenter="index = i"
             @click="pick(i)"
           >
+            <Boxes
+              v-if="intel.list.value.mode === 'workspace-symbols'"
+              :size="13"
+              style="color: var(--text-faint); flex: 0 0 auto"
+            />
             <FileCode2
-              v-if="intel.list.value.mode === 'references'"
+              v-else-if="intel.list.value.mode === 'references'"
               :size="13"
               style="color: var(--text-faint); flex: 0 0 auto"
             />
@@ -117,7 +140,13 @@ function onKeydown(event: KeyboardEvent) {
             <span v-if="item.preview" class="intel-preview">{{ item.preview }}</span>
           </div>
           <div v-if="!intel.list.value.loading && !filtered.length" class="palette-empty">
-            {{ intel.list.value.items.length ? 'Nothing matches your filter.' : 'Nothing found.' }}
+            {{
+              intel.list.value.mode === 'workspace-symbols' && !query.trim()
+                ? 'Type a name to search symbols in the workspace.'
+                : intel.list.value.items.length
+                  ? 'Nothing matches your filter.'
+                  : 'Nothing found.'
+            }}
           </div>
         </div>
         <div class="palette-foot">

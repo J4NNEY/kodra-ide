@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import type { Completion, CompletionContext, CompletionResult } from '@codemirror/autocomplete'
+import type { EditorView } from '@codemirror/view'
 import { snippetCompletion } from '@codemirror/autocomplete'
 import { call, isTauri, languageFor, listen as listenEvent } from '../lib/api'
 
@@ -32,6 +33,46 @@ export interface LspSymbol {
   line: number
   column: number
   depth: number
+}
+
+/** One parameter of a signature help entry. */
+export interface LspSignatureParameter {
+  label: string
+  documentation: string
+  /** Offsets of the label inside the signature label, or -1 when unknown. */
+  start: number
+  end: number
+}
+
+export interface LspSignature {
+  label: string
+  documentation: string
+  parameters: LspSignatureParameter[]
+  activeParameter: number
+}
+
+export interface LspSignatureHelp {
+  signatures: LspSignature[]
+  activeSignature: number
+}
+
+/** One occurrence of the symbol under the cursor, normalised to 1-based. */
+export interface LspHighlight {
+  line: number
+  column: number
+  endLine: number
+  endColumn: number
+  kind: 'text' | 'read' | 'write'
+}
+
+/** A symbol anywhere in the workspace (`workspace/symbol`). */
+export interface LspWorkspaceSymbol {
+  name: string
+  detail: string
+  kind: string
+  path: string
+  line: number
+  column: number
 }
 
 export interface LspRenameTarget {
@@ -296,6 +337,46 @@ function textEditOffsets(edit: any, text: string): [number, number] {
     offsetAtText(text, edit.range.start?.line ?? 0, edit.range.start?.character ?? 0),
     offsetAtText(text, edit.range.end?.line ?? 0, edit.range.end?.character ?? 0)
   ]
+}
+
+/** The range a completion replaces, from `TextEdit` or `InsertReplaceEdit`. */
+function completionRange(item: any, text: string): { from: number; to: number } | null {
+  const edit = item?.textEdit
+  if (!edit || !text) return null
+  if (edit.range) {
+    const [from, to] = textEditOffsets(edit, text)
+    return { from, to }
+  }
+  // `InsertReplaceEdit` carries `insert`/`replace` instead of a single range;
+  // replacing is what typing over an identifier is expected to do.
+  if (edit.replace || edit.insert) {
+    const [from, to] = textEditOffsets({ range: edit.replace ?? edit.insert }, text)
+    return { from, to }
+  }
+  return null
+}
+
+/** Flatten an LSP snippet into the text a plain insertion would produce. */
+function plainSnippet(text: string): string {
+  return text
+    .replace(/\$\{\d+\|([^}]*)\|\}/g, (_match, choices: string) => choices.split(',')[0] ?? '')
+    .replace(/\$\{\d+:([^}]*)\}/g, '$1')
+    .replace(/\$\{\d+\}/g, '')
+    .replace(/\$\d+/g, '')
+}
+
+/** Resolve a string or `[start, end]` label inside its parent label. */
+function labelIn(value: unknown, parent: string, from: number) {
+  if (typeof value === 'string') {
+    const start = parent.indexOf(value, from)
+    return { text: value, start, end: start < 0 ? -1 : start + value.length }
+  }
+  if (Array.isArray(value) && value.length === 2 && typeof value[0] === 'number') {
+    const start = Math.max(0, Number(value[0]))
+    const end = Math.max(start, Number(value[1]))
+    return { text: parent.slice(start, end), start, end }
+  }
+  return { text: '', start: -1, end: -1 }
 }
 
 export function useLsp() {
@@ -731,20 +812,86 @@ export function useLsp() {
         }
       })
       const items: any[] = Array.isArray(result) ? result : (result?.items ?? [])
-      return items.slice(0, 300).map((item) => {
-        const insert: string = item.textEdit?.newText ?? item.insertText ?? item.label ?? ''
-        const label = String(item.label ?? insert)
+      const source = typeof text === 'string' ? text : ''
+      const options: Completion[] = []
+      const resolvable: {
+        raw: any
+        option: Completion
+        extra: { from: number; to: number; insert: string }[]
+      }[] = []
+      for (const item of items.slice(0, 300)) {
+        const raw: string = item.textEdit?.newText ?? item.insertText ?? item.label ?? ''
+        const label = String(item.label ?? raw)
         const info =
           typeof item.documentation === 'string'
             ? item.documentation
             : item.documentation?.value ?? item.detail ?? ''
         const type = KIND[item.kind as number] ?? 'text'
-        if (item.insertTextFormat === 2) {
-          const snippet = insert.replace(/\$0/g, '${}')
-          return snippetCompletion(snippet, { label, detail: item.detail, type, info })
+        // Auto-imports and other side effects ride along as additional edits in
+        // the same document.
+        const extra = (Array.isArray(item.additionalTextEdits) ? item.additionalTextEdits : [])
+          .filter((edit: any) => edit?.range?.start)
+          .map((edit: any) => {
+            const [from, to] = textEditOffsets(edit, source)
+            return { from, to, insert: String(edit.newText ?? '') }
+          })
+        const range = completionRange(item, source)
+        const isSnippet = item.insertTextFormat === 2
+        // Keep tab stops when the option is a plain snippet, but prefer a plain
+        // insertion when imports must be added: one undo step, no lost edits.
+        if (isSnippet && !extra.length) {
+          const snippet = raw.replace(/\$0/g, '${}')
+          options.push(snippetCompletion(snippet, { label, detail: item.detail, type, info }))
+          continue
         }
-        return { label, apply: insert, detail: item.detail, type, info }
-      })
+        const insert = isSnippet ? plainSnippet(raw) : raw
+        const option: Completion = {
+          label,
+          detail: item.detail,
+          type,
+          info,
+          apply: (editor: EditorView, _completion: Completion, from: number, to: number) => {
+            const main = range ?? { from, to }
+            const changes: { from: number; to: number; insert: string }[] = [
+              { from: main.from, to: main.to, insert },
+              ...extra.filter(
+                (edit: { from: number; to: number }) =>
+                  edit.to <= main.from || edit.from >= main.to
+              )
+            ]
+            changes.sort((a, b) => a.from - b.from)
+            editor.dispatch({
+              changes,
+              selection: { anchor: main.from + insert.length },
+              scrollIntoView: true
+            })
+            editor.focus()
+          }
+        }
+        options.push(option)
+        // Dart defers auto-import edits to `completionItem/resolve`.
+        const imports = item?.data?.importUris
+        if (!extra.length && Array.isArray(imports) && imports.length) {
+          resolvable.push({ raw: item, option, extra })
+        }
+      }
+      // Fetch deferred edits before the popup opens, so picking an option is
+      // one transaction (insertion + import) and survives an instant Enter.
+      await Promise.all(
+        resolvable.slice(0, 12).map(async (entry) => {
+          const resolved = await send<any>(path, 'completionItem/resolve', entry.raw)
+          if (!resolved) return
+          if (resolved.detail) entry.option.detail = String(resolved.detail)
+          for (const edit of Array.isArray(resolved.additionalTextEdits)
+            ? resolved.additionalTextEdits
+            : []) {
+            if (!edit?.range?.start) continue
+            const [from, to] = textEditOffsets(edit, source)
+            entry.extra.push({ from, to, insert: String(edit.newText ?? '') })
+          }
+        })
+      )
+      return options
     } catch {
       return []
     }
@@ -805,6 +952,130 @@ export function useLsp() {
     const out: LspSymbol[] = []
     collectSymbols(result, 0, out)
     return out
+  }
+
+  /** Parameter hints for the call at a position. */
+  async function signatureHelp(
+    path: string,
+    line: number,
+    column: number,
+    text?: string
+  ): Promise<LspSignatureHelp | null> {
+    const result = await request<any>(path, 'textDocument/signatureHelp', line, column, text)
+    if (!result || !Array.isArray(result.signatures)) return null
+    const signatures: LspSignature[] = []
+    for (const raw of result.signatures.slice(0, 8)) {
+      const label = typeof raw?.label === 'string' ? raw.label : ''
+      if (!label) continue
+      let cursor = 0
+      const parameters: LspSignatureParameter[] = []
+      for (const param of Array.isArray(raw.parameters) ? raw.parameters : []) {
+        const resolved = labelIn(param?.label, label, cursor)
+        if (resolved.end >= 0) cursor = resolved.end
+        parameters.push({
+          label: resolved.text,
+          documentation: toMarkdown(param?.documentation),
+          start: resolved.start,
+          end: resolved.end
+        })
+      }
+      signatures.push({
+        label,
+        documentation: toMarkdown(raw.documentation),
+        parameters,
+        activeParameter: Number.isFinite(raw.activeParameter) ? Number(raw.activeParameter) : -1
+      })
+    }
+    if (!signatures.length) return null
+    const activeSignature = Number.isFinite(result.activeSignature)
+      ? Math.min(Math.max(0, Number(result.activeSignature)), signatures.length - 1)
+      : 0
+    const fallback = Number.isFinite(result.activeParameter) ? Number(result.activeParameter) : -1
+    for (const signature of signatures) {
+      const active = signature.activeParameter >= 0 ? signature.activeParameter : fallback
+      signature.activeParameter = Math.min(
+        Math.max(0, active >= 0 ? active : 0),
+        Math.max(0, signature.parameters.length - 1)
+      )
+    }
+    return { signatures, activeSignature }
+  }
+
+  /** Every occurrence of the symbol under the cursor in the current file. */
+  async function documentHighlights(
+    path: string,
+    line: number,
+    column: number,
+    text?: string
+  ): Promise<LspHighlight[]> {
+    const result = await request<any[]>(
+      path,
+      'textDocument/documentHighlight',
+      line,
+      column,
+      text
+    )
+    const out: LspHighlight[] = []
+    for (const item of Array.isArray(result) ? result : []) {
+      if (!item?.range) continue
+      const location = rangeToLocation(path, item.range)
+      out.push({
+        line: location.line,
+        column: location.column,
+        endLine: location.endLine,
+        endColumn: location.endColumn,
+        kind: item.kind === 2 ? 'read' : item.kind === 3 ? 'write' : 'text'
+      })
+    }
+    return out
+  }
+
+  /**
+   * Symbols across the workspace. `workspace/symbol` has no document context,
+   * so use the active file's server when possible and any ready one otherwise.
+   */
+  async function workspaceSymbols(
+    query: string,
+    language?: string
+  ): Promise<LspWorkspaceSymbol[]> {
+    if (!isTauri()) return []
+    let id: string | null = null
+    if (language && isSupported(language)) id = await ensureServer(language)
+    if (!id) {
+      id = Object.values(sessions.value).find((session) => session.status === 'ready')?.id ?? null
+    }
+    if (!id) return []
+    try {
+      const result = await call<any[]>('lsp_request', {
+        id,
+        method: 'workspace/symbol',
+        params: { query: query ?? '' }
+      })
+      const out: LspWorkspaceSymbol[] = []
+      const root = (ide.workspace.value?.path ?? '').replace(/\\/g, '/').toLowerCase()
+      const prefix = root && !root.endsWith('/') ? `${root}/` : root
+      for (const item of Array.isArray(result) ? result : []) {
+        if (!item) continue
+        const location = locationFrom(item.location ?? item)
+        if (!location) continue
+        // Servers may include SDK and dependency symbols; keep the workspace.
+        if (prefix) {
+          const file = location.path.replace(/\\/g, '/').toLowerCase()
+          if (!file.startsWith(prefix)) continue
+        }
+        out.push({
+          name: String(item.name ?? ''),
+          detail: String(item.containerName ?? ''),
+          kind: KIND[item.kind as number] ?? 'symbol',
+          path: location.path,
+          line: location.line,
+          column: location.column
+        })
+      }
+      return out
+    } catch {
+      return []
+    }
   }
 
   /** The range the server would rename at a position, plus its suggested name. */
@@ -977,6 +1248,9 @@ export function useLsp() {
     definition,
     references,
     documentSymbols,
+    signatureHelp,
+    documentHighlights,
+    workspaceSymbols,
     prepareRename,
     rename,
     codeActions,

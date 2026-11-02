@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.11.0 — 2026-11-02
+
+Code intelligence now covers the whole workspace and shows more context at the cursor.
+
+- **Workspace symbols** — `Ctrl+T` (or `Code: Go to Symbol in Workspace…`) opens a searchable list
+  of every symbol the active language server knows about. The query is answered by the server as you
+  type, SDK/dependency symbols outside the workspace are filtered out, and picking a row jumps to the
+  declaration.
+- **Signature help** — typing `(` or `,` in a call shows the parameter list in a popup with the
+  active parameter highlighted and the server's documentation. The hint follows the cursor while the
+  argument list stays open and closes as soon as it leaves.
+- **Occurrence highlighting** — every read and write of the symbol under the cursor is decorated in
+  the editor (writes are stronger), so a variable's uses are visible without selecting the word.
+- **Auto-import completions** — completions now honour their `textEdit` replacement range and any
+  `additionalTextEdits`. Dart defers auto-import edits to `completionItem/resolve`; Kudo resolves
+  those candidates before the popup opens, so picking an unimported class inserts the class *and* its
+  `import` in a single undo step.
+- Servers that omit `textEdit`/`additionalTextEdits` and snippet completions keep working as before.
+
 ## 0.10.1 — 2026-11-02
 
 Dart and Flutter projects are now first-class: `.dart` files are highlighted and get the full code

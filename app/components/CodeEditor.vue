@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Compartment, EditorState, RangeSet, StateEffect, StateField } from '@codemirror/state'
 import {
   Decoration,
@@ -74,6 +74,7 @@ import { protobuf } from '@codemirror/legacy-modes/mode/protobuf'
 import { xml } from '@codemirror/legacy-modes/mode/xml'
 import type { EditorTab } from '../lib/types'
 import type { EditorGroupId } from '../composables/useIde'
+import type { LspSignatureHelp } from '../composables/useLsp'
 import type { SyntaxKey, Theme } from '../lib/themes'
 
 const props = defineProps<{
@@ -193,6 +194,184 @@ const pausedLineField = StateField.define<DecorationSet>({
   },
   provide: (field) => EditorView.decorations.from(field)
 })
+
+/* ---------- symbol occurrences (documentHighlight) ---------- */
+
+interface OccurrenceRange {
+  from: number
+  to: number
+  kind: string
+}
+
+const setOccurrences = StateEffect.define<OccurrenceRange[]>()
+const occurrenceMark = {
+  text: Decoration.mark({ class: 'cm-kudo-occurrence-text' }),
+  read: Decoration.mark({ class: 'cm-kudo-occurrence' }),
+  write: Decoration.mark({ class: 'cm-kudo-occurrence-write' })
+}
+const occurrenceField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, tr) {
+    let next = value.map(tr.changes)
+    for (const effect of tr.effects) {
+      if (!effect.is(setOccurrences)) continue
+      const ranges = effect.value
+        .filter((range) => range.from < range.to && range.to <= tr.state.doc.length)
+        .sort((a, b) => a.from - b.from)
+        .map((range) =>
+          (occurrenceMark[range.kind as keyof typeof occurrenceMark] ?? occurrenceMark.read).range(
+            range.from,
+            range.to
+          )
+        )
+      next = Decoration.set(ranges, true)
+    }
+    return next
+  },
+  provide: (field) => EditorView.decorations.from(field)
+})
+
+/* ---------- signature help ---------- */
+
+const signature = ref<LspSignatureHelp | null>(null)
+const signatureStyle = ref<Record<string, string>>({})
+let signatureTimer: ReturnType<typeof setTimeout> | null = null
+let signatureSeq = 0
+let occurrenceTimer: ReturnType<typeof setTimeout> | null = null
+let occurrenceSeq = 0
+
+const activeSignature = computed(() => {
+  const help = signature.value
+  if (!help) return null
+  const sig = help.signatures[help.activeSignature] ?? help.signatures[0]
+  if (!sig) return null
+  const parameter = sig.parameters[sig.activeParameter]
+  const parts =
+    parameter && parameter.start >= 0 && parameter.end > parameter.start
+      ? [
+          { text: sig.label.slice(0, parameter.start), active: false },
+          { text: sig.label.slice(parameter.start, parameter.end), active: true },
+          { text: sig.label.slice(parameter.end), active: false }
+        ].filter((part) => part.text.length > 0)
+      : [{ text: sig.label, active: false }]
+  return {
+    parts,
+    doc: parameter?.documentation || sig.documentation,
+    index: help.activeSignature + 1,
+    total: help.signatures.length
+  }
+})
+
+function hideSignature() {
+  signatureSeq++
+  signature.value = null
+}
+
+function scheduleSignature(editor: EditorView, delay = 140) {
+  if (!lsp.isSupported(props.tab.language)) return
+  if (signatureTimer) clearTimeout(signatureTimer)
+  signatureTimer = setTimeout(() => {
+    signatureTimer = null
+    void updateSignature(editor)
+  }, delay)
+}
+
+async function updateSignature(editor: EditorView) {
+  const selection = editor.state.selection.main
+  if (!selection.empty) {
+    hideSignature()
+    return
+  }
+  const pos = selection.head
+  const line = editor.state.doc.lineAt(pos)
+  const before = line.text.slice(0, pos - line.from)
+  // Only ask when an argument list was just opened/extended or a hint is
+  // already on screen (so the active parameter stays in sync).
+  const typedArguments = /[,(]\s*$/.test(before)
+  if (!typedArguments && !signature.value) return
+  const seq = ++signatureSeq
+  const help = await lsp.signatureHelp(
+    props.tab.path,
+    line.number - 1,
+    pos - line.from,
+    editor.state.doc.toString()
+  )
+  if (seq !== signatureSeq || !view || view !== editor) return
+  if (!help) {
+    signature.value = null
+    return
+  }
+  signature.value = help
+  await nextTick()
+  positionSignature(editor, pos)
+}
+
+function positionSignature(editor: EditorView, pos: number) {
+  if (!host.value) return
+  const coords = editor.coordsAtPos(pos)
+  if (!coords) {
+    signature.value = null
+    return
+  }
+  const rect = host.value.getBoundingClientRect()
+  const width = Math.min(560, Math.max(300, rect.width - 24))
+  const left = Math.max(8, Math.min(coords.left - rect.left, rect.width - width - 8))
+  const above = rect.bottom - coords.bottom < 140
+  signatureStyle.value = {
+    left: `${left}px`,
+    maxWidth: `${width}px`,
+    ...(above
+      ? { bottom: `${rect.bottom - coords.top + 6}px` }
+      : { top: `${coords.bottom - rect.top + 6}px` })
+  }
+}
+
+function onEditorScroll() {
+  if (signature.value) signature.value = null
+}
+
+function scheduleOccurrences(editor: EditorView, delay = 220) {
+  if (!lsp.isSupported(props.tab.language)) return
+  if (occurrenceTimer) clearTimeout(occurrenceTimer)
+  occurrenceTimer = setTimeout(() => {
+    occurrenceTimer = null
+    void updateOccurrences(editor)
+  }, delay)
+}
+
+async function updateOccurrences(editor: EditorView) {
+  const selection = editor.state.selection.main
+  if (!selection.empty) {
+    occurrenceSeq++
+    editor.dispatch({ effects: setOccurrences.of([]) })
+    return
+  }
+  const line = editor.state.doc.lineAt(selection.head)
+  const at = selection.head - line.from
+  // Skip whitespace and punctuation: the server has nothing to highlight there.
+  if (!/[\w$#@]/.test(line.text[at] ?? line.text[at - 1] ?? '')) {
+    occurrenceSeq++
+    editor.dispatch({ effects: setOccurrences.of([]) })
+    return
+  }
+  const seq = ++occurrenceSeq
+  const highlights = await lsp.documentHighlights(
+    props.tab.path,
+    line.number - 1,
+    at,
+    editor.state.doc.toString()
+  )
+  if (seq !== occurrenceSeq || !view || view !== editor) return
+  editor.dispatch({
+    effects: setOccurrences.of(
+      highlights.map((item) => ({
+        from: offsetAt(editor.state.doc, item.line, item.column),
+        to: offsetAt(editor.state.doc, item.endLine, item.endColumn),
+        kind: item.kind
+      }))
+    )
+  })
+}
 
 const breakpointGutter = gutter({
   class: 'cm-breakpoint-gutter',
@@ -584,6 +763,7 @@ onMounted(() => {
       extensions: [
         breakpointField,
         pausedLineField,
+        occurrenceField,
         breakpointGutter,
         testField,
         testGutter,
@@ -635,8 +815,15 @@ onMounted(() => {
             emit('change', update.state.doc.toString())
             scheduleSync()
           }
-          if (update.docChanged || update.selectionSet) reportCursor(update.state)
-          if (update.focusChanged && update.view.hasFocus) reportCursor(update.state)
+          if (update.docChanged || update.selectionSet) {
+            reportCursor(update.state)
+            scheduleSignature(update.view)
+            scheduleOccurrences(update.view)
+          }
+          if (update.focusChanged) {
+            if (update.view.hasFocus) reportCursor(update.state)
+            else hideSignature()
+          }
         }),
         languageFor(props.tab.language)
       ]
@@ -644,6 +831,7 @@ onMounted(() => {
   })
 
   view.scrollDOM.scrollTop = props.tab.scrollTop ?? 0
+  view.scrollDOM.addEventListener('scroll', onEditorScroll, { passive: true })
   reportCursor(view.state)
   syncBreakpointMarkers()
   syncTestMarkers()
@@ -661,6 +849,16 @@ onBeforeUnmount(() => {
     clearTimeout(syncTimer)
     syncTimer = null
   }
+  if (signatureTimer) {
+    clearTimeout(signatureTimer)
+    signatureTimer = null
+  }
+  if (occurrenceTimer) {
+    clearTimeout(occurrenceTimer)
+    occurrenceTimer = null
+  }
+  hideSignature()
+  view?.scrollDOM.removeEventListener('scroll', onEditorScroll)
   void lsp.releaseDocument(props.tab.path)
   if (view && props.tab) props.tab.scrollTop = view.scrollDOM.scrollTop
   view?.destroy()
@@ -730,9 +928,93 @@ defineExpose({ focus: () => view?.focus() })
     <p>This file looks binary and can't be edited as text.</p>
     <span class="hint">{{ tab.path }}</span>
   </div>
-  <div v-else ref="host" class="code-host" />
+  <div v-else class="code-shell">
+    <div ref="host" class="code-host" />
+    <div v-if="signature && activeSignature" class="cm-kudo-signature" :style="signatureStyle">
+      <div class="sig-head">
+        <span class="sig-label"
+          ><span
+            v-for="(part, i) in activeSignature.parts"
+            :key="i"
+            :class="{ 'sig-active': part.active }"
+            >{{ part.text }}</span
+          ></span
+        >
+        <span v-if="activeSignature.total > 1" class="sig-count"
+          >{{ activeSignature.index }}/{{ activeSignature.total }}</span
+        >
+      </div>
+      <div
+        v-if="activeSignature.doc"
+        class="sig-doc"
+        v-html="renderMarkdown(activeSignature.doc)"
+      />
+    </div>
+  </div>
 </template>
 
+<style scoped>
+.code-shell {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+.cm-kudo-signature {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  padding: 6px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  box-shadow: 0 12px 32px #00000066;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.sig-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.sig-label {
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sig-active {
+  color: var(--accent-strong, var(--accent));
+  font-weight: 600;
+}
+.sig-count {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.sig-doc {
+  margin-top: 3px;
+  color: var(--text-faint);
+}
+.sig-doc :deep(p) {
+  margin: 0 0 4px;
+}
+.sig-doc :deep(p:last-child) {
+  margin-bottom: 0;
+}
+.sig-doc :deep(pre) {
+  margin: 4px 0;
+  padding: 5px 7px;
+  border-radius: 5px;
+  background: #0000004d;
+  overflow-x: auto;
+}
+.sig-doc :deep(code) {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+</style>
 <style scoped>
 .code-host {
   height: 100%;

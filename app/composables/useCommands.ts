@@ -449,6 +449,13 @@ export function useCommands() {
       run: () => intel.openSymbols()
     },
     {
+      id: 'code.workspace-symbols',
+      label: 'Code: Go to Symbol in Workspace…',
+      group: 'Code',
+      hint: 'Ctrl+T',
+      run: () => intel.openWorkspaceSymbols()
+    },
+    {
       id: 'code.actions',
       label: 'Code: Quick Fix / Code Actions',
       group: 'Code',
