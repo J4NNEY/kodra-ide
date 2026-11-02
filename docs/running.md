@@ -4,7 +4,7 @@ Panduan langkah demi langkah untuk menjalankan project `sokudo-clone` di mesin l
 aplikasi desktop Tauri maupun sebagai preview browser.
 
 - **Hasil akhir** yang diuji: Windows 11, Node 26.12.1, pnpm 9.15.0, Rust 1.96.0.
-- **Versi project** saat dokumen ini ditulis: `0.10.0`.
+- **Versi project** saat dokumen ini ditulis: `0.10.1`.
 - Semua perintah dijalankan dari folder project:
 
 ```powershell
@@ -159,6 +159,7 @@ Dideteksi dari `PATH`:
 | --- | --- | --- |
 | Rust | `rust-analyzer` | `rustup component add rust-analyzer` |
 | Go | `gopls` | `go install golang.org/x/tools/gopls@latest` |
+| Dart/Flutter | `dart language-server` | Dart SDK atau Flutter |
 | TypeScript/JS | `typescript-language-server` | `npm i -g typescript-language-server typescript` |
 | Python | `pyright-langserver` | `pip install pyright` |
 | C/C++ | `clangd` | LLVM |

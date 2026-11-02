@@ -6,7 +6,7 @@ use tauri::State;
 use walkdir::WalkDir;
 
 use crate::state::{AppState, RecentWorkspace};
-use crate::util::{human_size, is_probably_binary, now_unix, resolve_in_workspace};
+use crate::util::{display_path, human_size, is_probably_binary, now_unix, resolve_in_workspace};
 
 const SKIP_DIRS: [&str; 12] = [
     ".git",
@@ -178,9 +178,24 @@ pub fn list_dir(path: String, state: State<'_, AppState>) -> Result<Vec<Entry>, 
 }
 
 #[tauri::command]
-pub fn read_file(path: String, state: State<'_, AppState>) -> Result<FilePayload, String> {
-    let root = state.workspace_root()?;
-    let target = resolve_in_workspace(&root, &path)?;
+pub fn read_file(
+    path: String,
+    allow_outside: Option<bool>,
+    state: State<'_, AppState>,
+) -> Result<FilePayload, String> {
+    // Language-server navigation (go to definition/reference) may point at SDK
+    // or standard-library files outside the workspace, so those jumps opt in to
+    // read-only access. Every other caller stays inside the workspace.
+    let target = if allow_outside.unwrap_or(false) {
+        display_path(
+            &std::path::PathBuf::from(&path)
+                .canonicalize()
+                .map_err(|e| format!("cannot open file: {e}"))?,
+        )
+    } else {
+        let root = state.workspace_root()?;
+        resolve_in_workspace(&root, &path)?
+    };
     let bytes = std::fs::read(&target).map_err(|e| e.to_string())?;
     let binary = is_probably_binary(&bytes);
     let text = String::from_utf8_lossy(&bytes).to_string();

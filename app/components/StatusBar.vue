@@ -45,7 +45,23 @@ const language = computed(() => {
     shell: 'Shell',
     powershell: 'PowerShell',
     sql: 'SQL',
-    plaintext: 'Plain Text'
+    plaintext: 'Plain Text',
+    go: 'Go',
+    dart: 'Dart',
+    kotlin: 'Kotlin',
+    java: 'Java',
+    swift: 'Swift',
+    c: 'C',
+    cpp: 'C++',
+    csharp: 'C#',
+    groovy: 'Groovy',
+    properties: 'Properties',
+    ruby: 'Ruby',
+    lua: 'Lua',
+    protobuf: 'Protocol Buffers',
+    xml: 'XML',
+    dockerfile: 'Dockerfile',
+    autohotkey: 'AutoHotkey'
   }
   return map[tab.language] ?? tab.language
 })

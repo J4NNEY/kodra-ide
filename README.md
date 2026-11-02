@@ -20,7 +20,7 @@ public screenshots and the UI is written from scratch.
 | Database | SQLite browser (tables, schema, paging), SQL console with history, CSV export via native save dialog |
 | Browser | In-app preview overlay, address bar, request inspector run in Rust (no CORS), open in system browser |
 | MCP | stdio JSON-RPC client, server presets, connect/disconnect, tool list and a tool runner |
-| LSP | Language servers on PATH (rust-analyzer, gopls, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion, hover docs, go-to-definition (`F12`/`Ctrl+click`), rename (`F2`), references (`Shift+F12`), document symbols (`Ctrl+Shift+O`), quick fixes (`Ctrl+.`), diagnostics as squiggles plus a Problems panel and status-bar counts |
+| LSP | Language servers on PATH (rust-analyzer, gopls, Dart, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion, hover docs, go-to-definition (`F12`/`Ctrl+click`), rename (`F2`), references (`Shift+F12`), document symbols (`Ctrl+Shift+O`), quick fixes (`Ctrl+.`), diagnostics as squiggles plus a Problems panel and status-bar counts |
 | Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |
 | Tests | Test explorer for Go, Rust, Python and Node: auto-detection, framework groups, per-test status, run all/file/test, streamed output with command header, cancel, and gutter markers that run a test on click |
 | Tasks | Build/run task runner: `.kudo/tasks.json`, `package.json` scripts (nested, package-manager aware) and `Makefile` targets, default build task plus `Ctrl+Alt+B`, streamed output in the bottom panel, stop, per-row status |
@@ -279,7 +279,15 @@ Language Server Protocol for the code-aware features:
 
 `WorkspaceEdit`s are applied in the frontend because LSP positions are UTF-16 code units, exactly
 like JavaScript string indices. File create/rename/delete operations are not applied automatically;
-they are counted as skipped instead.
+they are counted as skipped instead. Navigating to a definition or reference may open a read-only
+file outside the workspace (such as the Dart/Flutter SDK); writes and agent tools remain restricted
+to the workspace.
+
+Dart files use `dart language-server` (LSP by default). When Flutter is installed, Kudo resolves the
+Dart SDK bundled with it (`<flutter>/bin/cache/dart-sdk`) so a Flutter project is analysed with the
+same SDK version that `flutter` uses; otherwise it falls back to `dart` on `PATH`. `.dart` files are
+highlighted with the Dart legacy mode, and other Flutter-adjacent files (`.kt`, `.java`, `.swift`,
+`.gradle`, `.xml`, `.yaml`, `.arb` and C/C++ headers) get their own syntax highlighting too.
 
 ## Terminals
 

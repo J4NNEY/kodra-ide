@@ -90,6 +90,13 @@ const CATALOG: ServerSpec[] = [
     install: 'go install golang.org/x/tools/gopls@latest'
   },
   {
+    name: 'dart',
+    languages: ['dart'],
+    command: 'dart',
+    args: ['language-server'],
+    install: 'install the Dart SDK (https://dart.dev/get-dart) or Flutter'
+  },
+  {
     name: 'typescript-language-server',
     languages: ['typescript', 'javascript'],
     command: 'typescript-language-server',

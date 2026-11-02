@@ -400,7 +400,7 @@ pub async fn lsp_respond(
 /// Report which well-known language servers exist on this machine.
 #[tauri::command]
 pub async fn lsp_detect() -> Result<HashMap<String, String>, String> {
-    const CANDIDATES: [&str; 9] = [
+    const CANDIDATES: [&str; 10] = [
         "rust-analyzer",
         "gopls",
         "typescript-language-server",
@@ -410,13 +410,42 @@ pub async fn lsp_detect() -> Result<HashMap<String, String>, String> {
         "svelte-language-server",
         "vscode-json-language-server",
         "bash-language-server",
+        "dart",
     ];
-    Ok(CANDIDATES
+    let mut found: HashMap<String, String> = CANDIDATES
         .iter()
         .filter_map(|name| {
             which(name).map(|path| (name.to_string(), path.to_string_lossy().to_string()))
         })
-        .collect())
+        .collect();
+    // Flutter ships its own Dart SDK and projects are written against that
+    // version, so prefer it over a standalone `dart` that may be older.
+    if let Some(dart) = dart_command() {
+        found.insert("dart".into(), dart.to_string_lossy().to_string());
+    }
+    Ok(found)
+}
+
+/// Resolve the Dart SDK that should run the analysis server: Flutter's
+/// bundled copy when available, any `dart` on PATH otherwise.
+fn dart_command() -> Option<std::path::PathBuf> {
+    if let Some(flutter) = which("flutter") {
+        if let Some(bin) = flutter.parent() {
+            let exe = if cfg!(windows) { "dart.exe" } else { "dart" };
+            let bundled = bin.join("cache").join("dart-sdk").join("bin").join(exe);
+            if bundled.is_file() {
+                return Some(bundled);
+            }
+        }
+    }
+    which("dart").filter(|path| {
+        // Spawning a `.bat` shim directly does not work on Windows.
+        let ext = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.to_ascii_lowercase());
+        !matches!(ext.as_deref(), Some("bat") | Some("cmd"))
+    })
 }
 
 fn path_to_uri(path: &str) -> String {

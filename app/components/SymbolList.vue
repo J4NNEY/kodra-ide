@@ -49,7 +49,7 @@ function pick(at?: number) {
   const item = filtered.value[at ?? index.value]
   if (!item) return
   intel.cancelList()
-  void ide.openFile(item.path, item.line)
+  void ide.openFile(item.path, item.line, false, true)
 }
 
 function onKeydown(event: KeyboardEvent) {

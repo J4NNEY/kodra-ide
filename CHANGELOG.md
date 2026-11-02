@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.10.1 — 2026-11-02
+
+Dart and Flutter projects are now first-class: `.dart` files are highlighted and get the full code
+intelligence stack instead of falling back to plaintext.
+
+- **Dart language server** — `dart language-server` is detected on `PATH` (or from the Flutter SDK's
+  `bin/cache/dart-sdk`) and started per Dart file, so completion, hover, go-to-definition, rename,
+  references, document symbols, quick fixes and diagnostics all work in Flutter apps and Dart
+  packages.
+- **Flutter SDK preference** — when `flutter` is installed, Kudo picks the Dart SDK bundled with it
+  so analysis matches the SDK version the project builds with; standalone Dart is the fallback.
+- **Dart + Flutter syntax** — added the Dart mode plus Kotlin, Java, Swift, XML, Groovy/Gradle,
+  `.properties`, C/C++, C#, Ruby, Lua and Protocol Buffers to the editor language map, and `.arb`
+  files are treated as JSON.
+- **SDK navigation** — go-to-definition and reference jumps may open read-only files outside the
+  workspace (for example Flutter's `binding.dart`), while writes and AI tools stay sandboxed to the
+  workspace.
+- **Status bar** — language names such as Dart, Go, Kotlin and C++ are spelled properly instead of
+  showing the raw lowercase language id.
+
 ## 0.10.0 — 2026-11-02
 
 Kudo's language servers now do more than complete and jump: they rename, find references, outline

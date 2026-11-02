@@ -57,6 +57,21 @@ import { toml } from '@codemirror/legacy-modes/mode/toml'
 import { standardSQL } from '@codemirror/legacy-modes/mode/sql'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { dockerFile } from '@codemirror/legacy-modes/mode/dockerfile'
+import {
+  c,
+  cpp,
+  csharp,
+  dart,
+  java,
+  kotlin
+} from '@codemirror/legacy-modes/mode/clike'
+import { swift } from '@codemirror/legacy-modes/mode/swift'
+import { groovy } from '@codemirror/legacy-modes/mode/groovy'
+import { properties } from '@codemirror/legacy-modes/mode/properties'
+import { ruby } from '@codemirror/legacy-modes/mode/ruby'
+import { lua } from '@codemirror/legacy-modes/mode/lua'
+import { protobuf } from '@codemirror/legacy-modes/mode/protobuf'
+import { xml } from '@codemirror/legacy-modes/mode/xml'
 import type { EditorTab } from '../lib/types'
 import type { EditorGroupId } from '../composables/useIde'
 import type { SyntaxKey, Theme } from '../lib/themes'
@@ -312,6 +327,32 @@ function languageFor(language: string) {
       return rust()
     case 'go':
       return StreamLanguage.define(go)
+    case 'dart':
+      return StreamLanguage.define(dart)
+    case 'kotlin':
+      return StreamLanguage.define(kotlin)
+    case 'java':
+      return StreamLanguage.define(java)
+    case 'swift':
+      return StreamLanguage.define(swift)
+    case 'c':
+      return StreamLanguage.define(c)
+    case 'cpp':
+      return StreamLanguage.define(cpp)
+    case 'csharp':
+      return StreamLanguage.define(csharp)
+    case 'groovy':
+      return StreamLanguage.define(groovy)
+    case 'properties':
+      return StreamLanguage.define(properties)
+    case 'ruby':
+      return StreamLanguage.define(ruby)
+    case 'lua':
+      return StreamLanguage.define(lua)
+    case 'protobuf':
+      return StreamLanguage.define(protobuf)
+    case 'xml':
+      return StreamLanguage.define(xml)
     case 'yaml':
       return StreamLanguage.define(yaml)
     case 'toml':
@@ -485,7 +526,7 @@ async function goToDefinition(pos?: number) {
     at - line.from,
     view.state.doc.toString()
   )
-  if (target?.path) await ide.openFile(target.path, target.line)
+  if (target?.path) await ide.openFile(target.path, target.line, false, true)
 }
 
 function lspExtensions() {

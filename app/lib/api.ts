@@ -186,6 +186,7 @@ export function languageFor(path: string): string {
     scss: 'css',
     less: 'css',
     py: 'python',
+    pyi: 'python',
     rs: 'rust',
     go: 'go',
     toml: 'toml',
@@ -195,7 +196,28 @@ export function languageFor(path: string): string {
     ps1: 'powershell',
     ahk: 'autohotkey',
     sql: 'sql',
-    dockerfile: 'dockerfile'
+    dockerfile: 'dockerfile',
+    dart: 'dart',
+    arb: 'json',
+    kt: 'kotlin',
+    kts: 'kotlin',
+    java: 'java',
+    swift: 'swift',
+    xml: 'xml',
+    gradle: 'groovy',
+    groovy: 'groovy',
+    properties: 'properties',
+    c: 'c',
+    h: 'c',
+    cc: 'cpp',
+    cpp: 'cpp',
+    cxx: 'cpp',
+    hpp: 'cpp',
+    hh: 'cpp',
+    cs: 'csharp',
+    rb: 'ruby',
+    lua: 'lua',
+    proto: 'protobuf'
   }
   return map[ext] ?? 'plaintext'
 }

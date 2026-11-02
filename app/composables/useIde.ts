@@ -265,7 +265,7 @@ export function useIde() {
     notify('Workspace closed')
   }
 
-  async function openFile(path: string, line?: number, quiet = false) {
+  async function openFile(path: string, line?: number, quiet = false, allowOutside = false) {
     if (!path) return
     const existing = tabs.value.find((t) => t.path === path)
     if (existing) {
@@ -286,7 +286,7 @@ export function useIde() {
         text: string
         binary: boolean
         size: number
-      }>('read_file', { path })
+      }>('read_file', { path, allowOutside })
       const tab: EditorTab = {
         path,
         name: basename(path),

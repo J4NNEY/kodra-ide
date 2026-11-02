@@ -179,7 +179,7 @@ export function useCodeIntel() {
       let text = ide.tabs.value.find((tab) => tab.path === path)?.content
       if (typeof text !== 'string') {
         try {
-          const file = await call<{ text: string }>('read_file', { path })
+          const file = await call<{ text: string }>('read_file', { path, allowOutside: true })
           text = file.text
         } catch {
           text = ''
