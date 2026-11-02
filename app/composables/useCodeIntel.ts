@@ -1,4 +1,4 @@
-import type { LspCodeAction } from './useLsp'
+import type { LspCodeAction, LspHierarchyKind } from './useLsp'
 import { call } from '../lib/api'
 
 export interface RenameState {
@@ -24,7 +24,7 @@ export interface CodeIntelItem {
 }
 
 export interface CodeIntelListState {
-  mode: 'references' | 'symbols' | 'workspace-symbols'
+  mode: 'references' | 'symbols' | 'workspace-symbols' | 'hierarchy'
   title: string
   items: CodeIntelItem[]
   loading: boolean
@@ -333,8 +333,66 @@ export function useCodeIntel() {
         : 'Workspace symbols'
   }
 
-  async function openActions(): Promise<void> {
+  /**
+   * One level of the call or type hierarchy around the symbol at the cursor.
+   * The overlay rows navigate like reference rows.
+   */
+  async function openHierarchy(kind: LspHierarchyKind): Promise<void> {
     const target_ = target()
+    if (!target_) {
+      ide.notify('Open a text file to inspect its hierarchy', 'info')
+      return
+    }
+    if (!lsp.isSupported(target_.language)) {
+      ide.notify(`No language server is available for ${target_.language}`, 'info')
+      return
+    }
+    const isCall = kind === 'callers' || kind === 'callees'
+    const prepared = await lsp.prepareHierarchy(
+      target_.path,
+      target_.line,
+      target_.column,
+      isCall ? 'call' : 'type',
+      target_.text
+    )
+    if (!prepared.length) {
+      ide.notify(isCall ? 'Nothing callable at the cursor' : 'No type at the cursor', 'info')
+      return
+    }
+    const root = prepared[0]!
+    const name = root.name || target_.language
+    const titles: Record<LspHierarchyKind, string> = {
+      callers: `Callers of “${name}”`,
+      callees: `Calls made by “${name}”`,
+      supertypes: `Supertypes of “${name}”`,
+      subtypes: `Subtypes of “${name}”`
+    }
+    list.value = {
+      mode: 'hierarchy',
+      title: titles[kind],
+      items: [],
+      loading: true
+    }
+    const related = await lsp.hierarchy(kind, root)
+    const current = list.value
+    if (!current || current.mode !== 'hierarchy') return
+    current.loading = false
+    current.items = related.map((entry) => ({
+      label: entry.name,
+      detail: entry.detail || entry.kind,
+      preview: relative(entry.path),
+      path: entry.path,
+      line: entry.line,
+      column: entry.column,
+      depth: 0,
+      kind: entry.kind
+    }))
+    current.title = related.length
+      ? `${titles[kind]} · ${related.length}`
+      : `${titles[kind]} · none`
+  }
+
+  async function openActions(): Promise<void> {    const target_ = target()
     if (!target_) {
       ide.notify('Open a text file to run a code action', 'info')
       return
@@ -436,6 +494,7 @@ export function useCodeIntel() {
     openSymbols,
     openWorkspaceSymbols,
     searchWorkspaceSymbols,
+    openHierarchy,
     openActions,
     runAction,
     cancelList,

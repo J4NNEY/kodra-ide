@@ -100,6 +100,36 @@ export interface AppliedEditSummary {
   written: number
 }
 
+/** One semantic token, normalised to 1-based line/column. */
+export interface LspSemanticToken {
+  line: number
+  column: number
+  length: number
+  /** Server token type, e.g. `class`, `typeParameter`, `parameter`. */
+  type: string
+}
+
+/** One inline hint supplied by the server (`: Type` or `name:`). */
+export interface LspInlayHint {
+  line: number
+  column: number
+  label: string
+  kind: 'type' | 'parameter' | 'other'
+}
+
+/** A call/type hierarchy entry usable for both display and the next request. */
+export interface LspHierarchyItem {
+  name: string
+  detail: string
+  kind: string
+  path: string
+  line: number
+  column: number
+  raw: any
+}
+
+export type LspHierarchyKind = 'callers' | 'callees' | 'supertypes' | 'subtypes'
+
 interface ServerSpec {
   name: string
   languages: string[]
@@ -113,6 +143,8 @@ interface SessionState {
   name: string
   status: 'starting' | 'ready' | 'failed'
   error?: string
+  /** Raw `initialize` result capabilities, used to gate optional features. */
+  capabilities?: any
 }
 
 const CATALOG: ServerSpec[] = [
@@ -637,17 +669,25 @@ export function useLsp() {
         [spec.name]: { id: '', name: spec.name, status: 'starting' }
       }
       try {
-        const started = await call<{ id: string; name: string }>('lsp_start', {
-          req: {
-            name: spec.name,
-            command,
-            args: spec.args,
-            rootUri: pathToUri(workspace)
+        const started = await call<{ id: string; name: string; capabilities?: any }>(
+          'lsp_start',
+          {
+            req: {
+              name: spec.name,
+              command,
+              args: spec.args,
+              rootUri: pathToUri(workspace)
+            }
           }
-        })
+        )
         sessions.value = {
           ...sessions.value,
-          [spec.name]: { id: started.id, name: spec.name, status: 'ready' }
+          [spec.name]: {
+            id: started.id,
+            name: spec.name,
+            status: 'ready',
+            capabilities: started.capabilities ?? null
+          }
         }
         return started.id
       } catch (error) {
@@ -1078,6 +1118,200 @@ export function useLsp() {
     }
   }
 
+  /**
+   * Server-side semantic tokens for the whole document. The legend comes from
+   * the server's `initialize` capabilities, so the token type index means the
+   * same thing here as it does on the wire.
+   */
+  async function semanticTokens(path: string, text: string): Promise<LspSemanticToken[]> {
+    const languageId = languageFor(path)
+    const id = await ensureServer(languageId)
+    if (!id) return []
+    const legend = sessionFor(languageId)?.capabilities?.semanticTokensProvider?.legend
+    if (!legend || !Array.isArray(legend.tokenTypes)) return []
+    await openDocument(path, languageId, text)
+    const result = await call<any>('lsp_request', {
+      id,
+      method: 'textDocument/semanticTokens/full',
+      params: { textDocument: { uri: pathToUri(path) } }
+    }).catch(() => null)
+    const data: number[] = Array.isArray(result?.data) ? result.data : []
+    const out: LspSemanticToken[] = []
+    let line = 0
+    let character = 0
+    for (let index = 0; index + 4 < data.length; index += 5) {
+      const deltaLine = Number(data[index] ?? 0)
+      const deltaStart = Number(data[index + 1] ?? 0)
+      const length = Number(data[index + 2] ?? 0)
+      const typeIndex = Number(data[index + 3] ?? -1)
+      if (deltaLine > 0) {
+        line += deltaLine
+        character = deltaStart
+      } else {
+        character += deltaStart
+      }
+      const type = legend.tokenTypes[typeIndex]
+      if (!type || !(length > 0)) continue
+      out.push({ line: line + 1, column: character + 1, length, type: String(type) })
+      if (out.length >= 20000) break
+    }
+    return out
+  }
+
+  /** Flatten an `InlayHint.label`, which may be a string or label parts. */
+  function inlayLabel(label: unknown): string {
+    if (typeof label === 'string') return label
+    if (!Array.isArray(label)) return ''
+    return label
+      .map((part: any) => (typeof part === 'string' ? part : String(part?.value ?? '')))
+      .join('')
+  }
+
+  /** Inferred types and parameter names for the whole document. */
+  async function inlayHints(path: string, text: string): Promise<LspInlayHint[]> {
+    const languageId = languageFor(path)
+    const id = await ensureServer(languageId)
+    if (!id) return []
+    const capabilities = sessionFor(languageId)?.capabilities
+    if (capabilities && !capabilities.inlayHintProvider) return []
+    const lines = text.split(/\r?\n/)
+    const endLine = Math.max(0, lines.length - 1)
+    const result = await send<any[]>(
+      path,
+      'textDocument/inlayHint',
+      {
+        textDocument: { uri: pathToUri(path) },
+        range: {
+          start: { line: 0, character: 0 },
+          end: { line: endLine, character: (lines[endLine] ?? '').length }
+        }
+      },
+      text
+    )
+    const out: LspInlayHint[] = []
+    for (const item of Array.isArray(result) ? result : []) {
+      const label = inlayLabel(item?.label)
+      if (!label || !item?.position) continue
+      out.push({
+        line: Number(item.position.line ?? 0) + 1,
+        column: Number(item.position.character ?? 0) + 1,
+        label,
+        kind: item.kind === 1 ? 'type' : item.kind === 2 ? 'parameter' : 'other'
+      })
+      if (out.length >= 300) break
+    }
+    return out
+  }
+
+  function hierarchyItem(item: any): LspHierarchyItem | null {
+    if (!item?.uri) return null
+    const path = uriToPath(String(item.uri))
+    const range = item.selectionRange ?? item.range
+    if (!range?.start) return null
+    const location = rangeToLocation(path, range)
+    return {
+      name: String(item.name ?? ''),
+      detail: String(item.detail ?? ''),
+      kind: KIND[item.kind as number] ?? 'symbol',
+      path,
+      line: location.line,
+      column: location.column,
+      raw: item
+    }
+  }
+
+  /** Ask the server which symbol the cursor sits in. */
+  async function prepareHierarchy(
+    path: string,
+    line: number,
+    column: number,
+    kind: 'call' | 'type',
+    text?: string
+  ): Promise<LspHierarchyItem[]> {
+    const result = await request<any[]>(
+      path,
+      kind === 'call'
+        ? 'textDocument/prepareCallHierarchy'
+        : 'textDocument/prepareTypeHierarchy',
+      line,
+      column,
+      text
+    )
+    const out: LspHierarchyItem[] = []
+    for (const item of Array.isArray(result) ? result : []) {
+      const entry = hierarchyItem(item)
+      if (entry) out.push(entry)
+    }
+    return out
+  }
+
+  /** Resolve the callers/callees or supertypes/subtypes of one item. */
+  async function hierarchy(
+    kind: LspHierarchyKind,
+    item: LspHierarchyItem
+  ): Promise<LspHierarchyItem[]> {
+    const method =
+      kind === 'callers'
+        ? 'callHierarchy/incomingCalls'
+        : kind === 'callees'
+          ? 'callHierarchy/outgoingCalls'
+          : kind === 'supertypes'
+            ? 'typeHierarchy/supertypes'
+            : 'typeHierarchy/subtypes'
+    const result = await send<any[]>(item.path, method, { item: item.raw })
+    const key = kind === 'callers' ? 'from' : kind === 'callees' ? 'to' : null
+    const out: LspHierarchyItem[] = []
+    for (const entry of Array.isArray(result) ? result : []) {
+      const raw = key ? entry?.[key] : entry
+      const resolved = hierarchyItem(raw)
+      if (!resolved) continue
+      const calls = Array.isArray(entry?.fromRanges) ? entry.fromRanges.length : 0
+      if (calls > 1) resolved.detail = `${resolved.detail || resolved.kind} · ${calls} calls`
+      out.push(resolved)
+    }
+    return out
+  }
+
+  /**
+   * Format through the language server. Used as a fallback when no external
+   * formatter (Prettier, gofmt, rustfmt, Black) covers the language.
+   */
+  async function formatText(
+    path: string,
+    text: string
+  ): Promise<{ tool: string; changed: boolean; text: string } | null> {
+    const languageId = languageFor(path)
+    const id = await ensureServer(languageId)
+    if (!id) return null
+    const capabilities = sessionFor(languageId)?.capabilities
+    if (capabilities && !capabilities.documentFormattingProvider) return null
+    await openDocument(path, languageId, text)
+    const result = await call<any[]>('lsp_request', {
+      id,
+      method: 'textDocument/formatting',
+      params: {
+        textDocument: { uri: pathToUri(path) },
+        options: { tabSize: ide.settings.value.tabSize, insertSpaces: true }
+      }
+    }).catch(() => null)
+    const edits = (Array.isArray(result) ? result : [])
+      .map((edit: any) => {
+        const [from, to] = textEditOffsets(edit, text)
+        return { from, to, newText: String(edit?.newText ?? '') }
+      })
+      .filter((edit) => edit.from <= edit.to)
+      .sort((a, b) => b.from - a.from || b.to - a.to)
+    let next = text
+    for (const edit of edits) {
+      next = next.slice(0, edit.from) + edit.newText + next.slice(edit.to)
+    }
+    return {
+      tool: `${specFor(languageId)?.name ?? 'language server'} language server`,
+      changed: next !== text,
+      text: next
+    }
+  }
+
   /** The range the server would rename at a position, plus its suggested name. */
   async function prepareRename(
     path: string,
@@ -1251,6 +1485,11 @@ export function useLsp() {
     signatureHelp,
     documentHighlights,
     workspaceSymbols,
+    semanticTokens,
+    inlayHints,
+    prepareHierarchy,
+    hierarchy,
+    formatText,
     prepareRename,
     rename,
     codeActions,

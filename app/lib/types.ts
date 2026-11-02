@@ -142,6 +142,8 @@ export interface Settings {
   restoreSession: boolean
   formatOnSave: boolean
   lintOnSave: boolean
+  inlayHints: boolean
+  semanticHighlighting: boolean
   ai: AiSettings
   recentWorkspaces: RecentWorkspace[]
   mcpServers: McpServerConfig[]

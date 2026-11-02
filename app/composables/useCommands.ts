@@ -456,6 +456,31 @@ export function useCommands() {
       run: () => intel.openWorkspaceSymbols()
     },
     {
+      id: 'code.callers',
+      label: 'Code: Show Call Hierarchy (Callers)',
+      group: 'Code',
+      hint: 'Shift+Alt+H',
+      run: () => intel.openHierarchy('callers')
+    },
+    {
+      id: 'code.callees',
+      label: 'Code: Show Call Hierarchy (Callees)',
+      group: 'Code',
+      run: () => intel.openHierarchy('callees')
+    },
+    {
+      id: 'code.supertypes',
+      label: 'Code: Show Type Hierarchy (Supertypes)',
+      group: 'Code',
+      run: () => intel.openHierarchy('supertypes')
+    },
+    {
+      id: 'code.subtypes',
+      label: 'Code: Show Type Hierarchy (Subtypes)',
+      group: 'Code',
+      run: () => intel.openHierarchy('subtypes')
+    },
+    {
       id: 'code.actions',
       label: 'Code: Quick Fix / Code Actions',
       group: 'Code',

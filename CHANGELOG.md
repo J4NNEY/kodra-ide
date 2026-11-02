@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.12.0 — 2026-11-02
+
+Language servers now colour the buffer, annotate inferred types and answer hierarchy questions.
+
+- **Semantic tokens** — the editor requests `textDocument/semanticTokens/full` and decorates the
+  server's token ranges on top of the syntax tree, so classes, methods, parameters, properties and
+  type parameters use the active theme's syntax colours. The server legend is read from
+  `initialize`, and an empty answer is retried while analysis warms up.
+- **Inlay hints** — inferred types and parameter names are drawn inline (`final Greeter greeter`,
+  `print(object: …)`) without becoming part of the text, the undo history or the accessibility tree.
+  Both features have their own switches under **Settings → Editor → Language server** and default to
+  on.
+- **Call hierarchy** — `Shift+Alt+H` (or `Code: Show Call Hierarchy (Callers)`) lists every caller of
+  the symbol at the cursor; `Code: Show Call Hierarchy (Callees)` lists what it calls. Rows show the
+  containing file and jump to the call site.
+- **Type hierarchy** — `Code: Show Type Hierarchy (Supertypes)` and `… (Subtypes)` walk a class or
+  interface up and down the inheritance tree; when there is nothing above or below the list says
+  `· none`.
+- **Formatting from the server** — `Shift+Alt+F` and **Format on save** now fall back to
+  `textDocument/formatting` when no external formatter covers the language, so Dart files format
+  without a separate toolchain. The toast names the server (`Formatted with dart language server`).
+- The client advertises semantic-token, inlay-hint, call-hierarchy and type-hierarchy capabilities
+  during `initialize`.
+
 ## 0.11.0 — 2026-11-02
 
 Code intelligence now covers the whole workspace and shows more context at the cursor.

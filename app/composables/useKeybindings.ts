@@ -96,6 +96,14 @@ export function useKeybindings() {
       return
     }
 
+    // Shift+Alt+H shows the callers of the symbol under the cursor.
+    if (event.altKey && event.shiftKey && event.key.toLowerCase() === 'h') {
+      if (ide.settingsOpen.value || ide.palette.value.mode !== 'none' || intel.anyOpen.value) return
+      event.preventDefault()
+      void intel.openHierarchy('callers')
+      return
+    }
+
     const mod = event.ctrlKey || event.metaKey
     if (!mod) {
       chord = null

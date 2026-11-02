@@ -84,6 +84,10 @@ pub struct Settings {
     pub format_on_save: bool,
     #[serde(default)]
     pub lint_on_save: bool,
+    #[serde(default = "default_true")]
+    pub inlay_hints: bool,
+    #[serde(default = "default_true")]
+    pub semantic_highlighting: bool,
     pub ai: AiSettings,
     pub recent_workspaces: Vec<RecentWorkspace>,
     #[serde(default)]
@@ -113,6 +117,8 @@ impl Default for Settings {
             restore_session: true,
             format_on_save: false,
             lint_on_save: false,
+            inlay_hints: true,
+            semantic_highlighting: true,
             ai: AiSettings::default(),
             recent_workspaces: Vec::new(),
             mcp_servers: Vec::new(),

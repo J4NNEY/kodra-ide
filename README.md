@@ -20,11 +20,11 @@ public screenshots and the UI is written from scratch.
 | Database | SQLite browser (tables, schema, paging), SQL console with history, CSV export via native save dialog |
 | Browser | In-app preview overlay, address bar, request inspector run in Rust (no CORS), open in system browser |
 | MCP | stdio JSON-RPC client, server presets, connect/disconnect, tool list and a tool runner |
-| LSP | Language servers on PATH (rust-analyzer, gopls, Dart, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion with auto-import edits, hover docs, go-to-definition (`F12`/`Ctrl+click`), signature help and occurrence highlighting at the cursor, rename (`F2`), references (`Shift+F12`), document symbols (`Ctrl+Shift+O`), workspace symbols (`Ctrl+T`), quick fixes (`Ctrl+.`), diagnostics as squiggles plus a Problems panel and status-bar counts |
+| LSP | Language servers on PATH (rust-analyzer, gopls, Dart, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion with auto-import edits, hover docs, go-to-definition (`F12`/`Ctrl+click`), signature help and occurrence highlighting at the cursor, semantic tokens and inline type/parameter hints, call hierarchy (`Shift+Alt+H`) and type hierarchy, rename (`F2`), references (`Shift+F12`), document symbols (`Ctrl+Shift+O`), workspace symbols (`Ctrl+T`), quick fixes (`Ctrl+.`), diagnostics as squiggles plus a Problems panel and status-bar counts |
 | Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |
 | Tests | Test explorer for Go, Rust, Python and Node: auto-detection, framework groups, per-test status, run all/file/test, streamed output with command header, cancel, and gutter markers that run a test on click |
 | Tasks | Build/run task runner: `.kudo/tasks.json`, `package.json` scripts (nested, package-manager aware) and `Makefile` targets, default build task plus `Ctrl+Alt+B`, streamed output in the bottom panel, stop, per-row status |
-| Formatting | Prettier, gofmt, rustfmt and Black format the buffer before it is written (`Format on save`), format on demand (`Shift+Alt+F`), and a workspace-local install wins over `PATH`; ESLint and Ruff lint after saving into the Problems panel |
+| Formatting | Prettier, gofmt, rustfmt and Black format the buffer before it is written (`Format on save`), format on demand (`Shift+Alt+F`), and a workspace-local install wins over `PATH`; languages without an external formatter fall back to the language server; ESLint and Ruff lint after saving into the Problems panel |
 | Docker | Containers/images tabs, start/stop/restart, logs, run image |
 | Network | Live request log (AI calls, browser fetches, update checks) in the bottom panel |
 | Updater | Feed check, download to temp, launch installer, reveal in Explorer (see `docs/updater.md`) |
@@ -243,6 +243,9 @@ for the ones that are missing.
   `Saved x.go · formatted with gofmt`.
 - **Format Document** (`Shift+Alt+F`) formats the active buffer without saving it, so you can review
   the diff and undo it.
+- **Language-server fallback** — when none of the tools above covers the language, Kudo sends
+  `textDocument/formatting` to the running language server (Dart uses this path) and applies the
+  returned edits. The toast names the server, e.g. `Formatted with dart language server`.
 - **Lint on save** runs ESLint or Ruff on the saved text and merges the result into the **Problems**
   panel and the editor squiggles, next to any language server diagnostics. Lint never blocks a save.
   The status bar chip sums language server and linter counts.
@@ -273,9 +276,23 @@ Language Server Protocol for the code-aware features:
   `textDocument/codeAction`, resolves actions through `codeAction/resolve` when needed, then applies
   the edit or runs `workspace/executeCommand`. Servers may also push `workspace/applyEdit`; Kudo
   applies that edit and answers the request so the server never blocks.
-- **Commands** — all four are in the palette (`Code: Rename Symbol`, `Code: Find All References`,
-  `Code: Go to Symbol in File…`, `Code: Quick Fix / Code Actions`), plus `Code: Restart Language
-  Servers` for a stuck server.
+- **Semantic tokens** — `textDocument/semanticTokens/full` refines the syntax highlighting with the
+  server's token legend, so class names, methods, parameters, properties and type parameters get the
+  theme's syntax colours. The legend is read from the `initialize` result and an empty answer is
+  retried while the server is still analysing.
+- **Inlay hints** — `textDocument/inlayHint` draws inferred types and parameter names inline
+  (`final Greeter greeter`, `print(object: …)`). Hints are decoration only: they are not part of the
+  text, the undo history or the accessibility tree. Both features can be switched off under
+  **Settings → Editor → Language server**.
+- **Call hierarchy** — `Shift+Alt+H` (or `Code: Show Call Hierarchy (Callers)`) prepares the symbol
+  at the cursor and queries `callHierarchy/incomingCalls`; the `Callees` command uses
+  `callHierarchy/outgoingCalls`. Rows show the file that contains the call and jump to the call site.
+- **Type hierarchy** — `Code: Show Type Hierarchy (Supertypes)` and `… (Subtypes)` walk
+  `typeHierarchy/supertypes` and `typeHierarchy/subtypes`, with `· none` when the tree ends.
+- **Commands** — all of these are in the palette (`Code: Rename Symbol`, `Code: Find All References`,
+  `Code: Go to Symbol in File…`, `Code: Quick Fix / Code Actions`, `Code: Show Call Hierarchy
+  (Callers/Callees)`, `Code: Show Type Hierarchy (Supertypes/Subtypes)`), plus `Code: Restart
+  Language Servers` for a stuck server.
 
 `WorkspaceEdit`s are applied in the frontend because LSP positions are UTF-16 code units, exactly
 like JavaScript string indices. File create/rename/delete operations are not applied automatically;

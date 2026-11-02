@@ -4,7 +4,7 @@ import type {
   SidebarView,
   WorkspaceInfo
 } from '../lib/types'
-import { basename, call, languageFor, pickFolder } from '../lib/api'
+import { basename, call, isTauri, languageFor, pickFolder } from '../lib/api'
 import { defaultSettings } from '../lib/defaults'
 import {
   EXTENSION_THEMES_KEY,
@@ -336,6 +336,15 @@ export function useIde() {
         text = outcome.text
         tab.content = text
         formattedWith = outcome.tool
+      } else if (!outcome.tool && isTauri()) {
+        // No Prettier/gofmt/rustfmt/Black for this language: the language
+        // server can still format it (Dart does).
+        const viaLsp = await useLsp().formatText(target, text)
+        if (viaLsp?.changed) {
+          text = viaLsp.text
+          tab.content = text
+          formattedWith = viaLsp.tool
+        }
       }
     }
     try {
@@ -367,7 +376,17 @@ export function useIde() {
       return
     }
     if (!outcome.tool) {
-      notify('No formatter installed for this file type', 'info')
+      const viaLsp = isTauri() ? await useLsp().formatText(tab.path, tab.content) : null
+      if (!viaLsp) {
+        notify('No formatter installed for this file type', 'info')
+        return
+      }
+      if (!viaLsp.changed) {
+        notify(`Already formatted with ${viaLsp.tool}`, 'info')
+        return
+      }
+      updateContent(tab.path, viaLsp.text)
+      notify(`Formatted with ${viaLsp.tool}`, 'success')
       return
     }
     if (!outcome.changed) {

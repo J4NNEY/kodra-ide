@@ -14,6 +14,8 @@ export const defaultSettings: Settings = {
   restoreSession: true,
   formatOnSave: false,
   lintOnSave: false,
+  inlayHints: true,
+  semanticHighlighting: true,
   ai: {
     provider: 'demo',
     baseUrl: 'https://api.openai.com/v1',

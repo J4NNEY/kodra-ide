@@ -428,7 +428,8 @@ watch(
                 <div>
                   <label>Format on save</label>
                   <span class="hint">
-                    Run Prettier, gofmt, rustfmt or Black before the file is written.
+                    Run Prettier, gofmt, rustfmt or Black before the file is written, falling back to
+                    the language server's formatter.
                   </span>
                 </div>
                 <button
@@ -449,6 +450,36 @@ watch(
                   class="switch lint-on-save-switch"
                   :class="{ on: draft.lintOnSave }"
                   @click="draft.lintOnSave = !draft.lintOnSave"
+                />
+              </div>
+
+              <div class="pane-title" style="margin-top: 18px">Language server</div>
+
+              <div class="field toggle-field">
+                <div>
+                  <label>Semantic highlighting</label>
+                  <span class="hint">
+                    Let the language server refine token colours (types, parameters, properties).
+                  </span>
+                </div>
+                <button
+                  class="switch semantic-highlighting-switch"
+                  :class="{ on: draft.semanticHighlighting }"
+                  @click="draft.semanticHighlighting = !draft.semanticHighlighting"
+                />
+              </div>
+
+              <div class="field toggle-field">
+                <div>
+                  <label>Inlay hints</label>
+                  <span class="hint">
+                    Show inferred types and parameter names inline next to the code.
+                  </span>
+                </div>
+                <button
+                  class="switch inlay-hints-switch"
+                  :class="{ on: draft.inlayHints }"
+                  @click="draft.inlayHints = !draft.inlayHints"
                 />
               </div>
 

@@ -1710,6 +1710,75 @@ kbd {
   border-radius: 2px;
 }
 
+/* ---------- LSP: semantic tokens ---------- */
+/*
+ * The palette lives in JS (`applyThemeVars` mirrors it onto --syntax-*), so
+ * these colours follow every built-in and extension theme. `!important` beats
+ * the highlight styles CodeMirror injects at runtime, which would otherwise
+ * win the cascade by being appended later in the head.
+ */
+.cm-kudo-sem-class,
+.cm-kudo-sem-interface,
+.cm-kudo-sem-enum,
+.cm-kudo-sem-struct,
+.cm-kudo-sem-typeparameter,
+.cm-kudo-sem-type,
+.cm-kudo-sem-namespace,
+.cm-kudo-sem-enummember {
+  color: var(--syntax-type, var(--text)) !important;
+}
+.cm-kudo-sem-function,
+.cm-kudo-sem-method,
+.cm-kudo-sem-constructor,
+.cm-kudo-sem-macro,
+.cm-kudo-sem-event {
+  color: var(--syntax-function, var(--text)) !important;
+}
+.cm-kudo-sem-parameter,
+.cm-kudo-sem-variable,
+.cm-kudo-sem-property,
+.cm-kudo-sem-label {
+  color: var(--syntax-variable, var(--text)) !important;
+}
+.cm-kudo-sem-keyword,
+.cm-kudo-sem-modifier {
+  color: var(--syntax-keyword, var(--text)) !important;
+}
+.cm-kudo-sem-comment {
+  color: var(--syntax-comment, var(--text-muted)) !important;
+}
+.cm-kudo-sem-string,
+.cm-kudo-sem-regexp {
+  color: var(--syntax-string, var(--text)) !important;
+}
+.cm-kudo-sem-number,
+.cm-kudo-sem-boolean {
+  color: var(--syntax-number, var(--text)) !important;
+}
+.cm-kudo-sem-operator {
+  color: var(--syntax-operator, var(--text)) !important;
+}
+.cm-kudo-sem-annotation,
+.cm-kudo-sem-decorator,
+.cm-kudo-sem-source {
+  color: var(--syntax-meta, var(--text-faint)) !important;
+}
+
+/* ---------- LSP: inlay hints ---------- */
+.cm-kudo-inlay {
+  color: var(--text-faint);
+  font-size: 0.92em;
+  opacity: 0.85;
+  margin: 0 3px;
+  user-select: none;
+}
+.cm-kudo-inlay-type {
+  font-style: italic;
+}
+.cm-kudo-inlay-parameter {
+  color: var(--text-muted);
+}
+
 .cm-lintRange-error {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 2.5 L2 0.5 L4 2.5 L6 0.5' fill='none' stroke='%23e4676b' stroke-width='1'/%3E%3C/svg%3E");
   background-repeat: repeat-x;

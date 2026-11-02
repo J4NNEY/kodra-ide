@@ -458,6 +458,12 @@ export function applyThemeVars(
   for (const key of COLOR_KEYS) {
     root.style.setProperty(CSS_VAR[key], theme.colors[key])
   }
+  // Expose the syntax palette to CSS so semantic tokens added on top of the
+  // syntax tree can use the same colours as the theme.
+  for (const key of SYNTAX_KEYS) {
+    const color = theme.syntax[key]?.color
+    if (color) root.style.setProperty(`--syntax-${key}`, color)
+  }
   const accent = isColor(options.accent) ? options.accent : theme.colors.accent
   root.style.setProperty('--accent', accent)
   root.style.setProperty(

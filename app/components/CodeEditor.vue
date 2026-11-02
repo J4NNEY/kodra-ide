@@ -13,7 +13,8 @@ import {
   highlightSpecialChars,
   keymap,
   lineNumbers,
-  rectangularSelection
+  rectangularSelection,
+  WidgetType
 } from '@codemirror/view'
 import type { DecorationSet } from '@codemirror/view'
 import {
@@ -231,6 +232,99 @@ const occurrenceField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field)
 })
 
+/* ---------- semantic tokens ---------- */
+
+interface SemanticRange {
+  from: number
+  to: number
+  type: string
+}
+
+const setSemanticTokens = StateEffect.define<SemanticRange[]>()
+const semanticMarks = new Map<string, Decoration>()
+function semanticMark(type: string): Decoration {
+  const key = type.replace(/[^a-z0-9]/gi, '').toLowerCase()
+  let mark = semanticMarks.get(key)
+  if (!mark) {
+    mark = Decoration.mark({ class: `cm-kudo-sem-${key}` })
+    semanticMarks.set(key, mark)
+  }
+  return mark
+}
+const semanticField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, tr) {
+    let next = value.map(tr.changes)
+    for (const effect of tr.effects) {
+      if (!effect.is(setSemanticTokens)) continue
+      const ranges = effect.value
+        .filter((range) => range.from < range.to && range.to <= tr.state.doc.length)
+        .sort((a, b) => a.from - b.from)
+        .map((range) => semanticMark(range.type).range(range.from, range.to))
+      next = Decoration.set(ranges, true)
+    }
+    return next
+  },
+  provide: (field) => EditorView.decorations.from(field)
+})
+
+/* ---------- inlay hints ---------- */
+
+class InlayWidget extends WidgetType {
+  constructor(
+    readonly text: string,
+    readonly kind: string
+  ) {
+    super()
+  }
+
+  override eq(other: InlayWidget): boolean {
+    return other.text === this.text && other.kind === this.kind
+  }
+
+  override toDOM(): HTMLElement {
+    const span = document.createElement('span')
+    span.className = `cm-kudo-inlay cm-kudo-inlay-${this.kind}`
+    span.textContent = this.text
+    // Hints are decoration, not code: keep them out of the accessibility tree.
+    span.setAttribute('aria-hidden', 'true')
+    return span
+  }
+
+  override ignoreEvent(): boolean {
+    return true
+  }
+}
+
+interface InlayHintRange {
+  pos: number
+  text: string
+  kind: string
+}
+
+const setInlayHints = StateEffect.define<InlayHintRange[]>()
+const inlayField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, tr) {
+    let next = value.map(tr.changes)
+    for (const effect of tr.effects) {
+      if (!effect.is(setInlayHints)) continue
+      const widgets = effect.value
+        .filter((hint) => hint.text && hint.pos >= 0 && hint.pos <= tr.state.doc.length)
+        .sort((a, b) => a.pos - b.pos)
+        .map((hint) =>
+          Decoration.widget({
+            widget: new InlayWidget(hint.text, hint.kind),
+            side: 1
+          }).range(hint.pos)
+        )
+      next = Decoration.set(widgets, true)
+    }
+    return next
+  },
+  provide: (field) => EditorView.decorations.from(field)
+})
+
 /* ---------- signature help ---------- */
 
 const signature = ref<LspSignatureHelp | null>(null)
@@ -239,6 +333,12 @@ let signatureTimer: ReturnType<typeof setTimeout> | null = null
 let signatureSeq = 0
 let occurrenceTimer: ReturnType<typeof setTimeout> | null = null
 let occurrenceSeq = 0
+let semanticTimer: ReturnType<typeof setTimeout> | null = null
+let semanticSeq = 0
+let semanticRetries = 0
+let inlayTimer: ReturnType<typeof setTimeout> | null = null
+let inlaySeq = 0
+let inlayRetries = 0
 
 const activeSignature = computed(() => {
   const help = signature.value
@@ -371,6 +471,82 @@ async function updateOccurrences(editor: EditorView) {
       }))
     )
   })
+}
+
+function scheduleSemantic(editor: EditorView, delay = 320) {
+  if (!ide.settings.value.semanticHighlighting) return
+  if (!lsp.isSupported(props.tab.language)) return
+  if (semanticTimer) clearTimeout(semanticTimer)
+  semanticTimer = setTimeout(() => {
+    semanticTimer = null
+    void updateSemantic(editor)
+  }, delay)
+}
+
+async function updateSemantic(editor: EditorView) {
+  const doc = editor.state.doc
+  const seq = ++semanticSeq
+  const tokens = await lsp.semanticTokens(props.tab.path, doc.toString())
+  if (seq !== semanticSeq || !view || view !== editor) return
+  // A server that is still indexing answers with no tokens; try again shortly.
+  if (!tokens.length && semanticRetries < 3) {
+    semanticRetries++
+    scheduleSemantic(editor, 1200)
+    return
+  }
+  semanticRetries = 0
+  editor.dispatch({
+    effects: setSemanticTokens.of(
+      tokens.map((token) => ({
+        from: offsetAt(doc, token.line, token.column),
+        to: offsetAt(doc, token.line, token.column + token.length),
+        type: token.type
+      }))
+    )
+  })
+}
+
+function scheduleInlay(editor: EditorView, delay = 420) {
+  if (!ide.settings.value.inlayHints) return
+  if (!lsp.isSupported(props.tab.language)) return
+  if (inlayTimer) clearTimeout(inlayTimer)
+  inlayTimer = setTimeout(() => {
+    inlayTimer = null
+    void updateInlay(editor)
+  }, delay)
+}
+
+async function updateInlay(editor: EditorView) {
+  const doc = editor.state.doc
+  const seq = ++inlaySeq
+  const hints = await lsp.inlayHints(props.tab.path, doc.toString())
+  if (seq !== inlaySeq || !view || view !== editor) return
+  // Inferred types only show up once analysis settles; retry an empty answer.
+  if (!hints.length && inlayRetries < 3) {
+    inlayRetries++
+    scheduleInlay(editor, 1500)
+    return
+  }
+  inlayRetries = 0
+  editor.dispatch({
+    effects: setInlayHints.of(
+      hints.map((hint) => ({
+        pos: offsetAt(doc, hint.line, hint.column),
+        text: hint.label,
+        kind: hint.kind
+      }))
+    )
+  })
+}
+
+function clearSemantic(editor: EditorView) {
+  semanticSeq++
+  editor.dispatch({ effects: setSemanticTokens.of([]) })
+}
+
+function clearInlay(editor: EditorView) {
+  inlaySeq++
+  editor.dispatch({ effects: setInlayHints.of([]) })
 }
 
 const breakpointGutter = gutter({
@@ -764,6 +940,8 @@ onMounted(() => {
         breakpointField,
         pausedLineField,
         occurrenceField,
+        semanticField,
+        inlayField,
         breakpointGutter,
         testField,
         testGutter,
@@ -814,6 +992,10 @@ onMounted(() => {
           if (update.docChanged) {
             emit('change', update.state.doc.toString())
             scheduleSync()
+            semanticRetries = 0
+            inlayRetries = 0
+            scheduleSemantic(update.view)
+            scheduleInlay(update.view)
           }
           if (update.docChanged || update.selectionSet) {
             reportCursor(update.state)
@@ -840,6 +1022,10 @@ onMounted(() => {
   if (!props.groupId || ide.activeGroupId.value === props.groupId) view.focus()
   if (!props.tab.binary) {
     void lsp.acquireDocument(props.tab.path, props.tab.language, props.tab.content)
+    // Language servers answer these only after the document is open, so give
+    // the first sync a head start.
+    scheduleSemantic(view, 700)
+    scheduleInlay(view, 950)
   }
 })
 
@@ -857,6 +1043,16 @@ onBeforeUnmount(() => {
     clearTimeout(occurrenceTimer)
     occurrenceTimer = null
   }
+  if (semanticTimer) {
+    clearTimeout(semanticTimer)
+    semanticTimer = null
+  }
+  if (inlayTimer) {
+    clearTimeout(inlayTimer)
+    inlayTimer = null
+  }
+  semanticSeq++
+  inlaySeq++
   hideSignature()
   view?.scrollDOM.removeEventListener('scroll', onEditorScroll)
   void lsp.releaseDocument(props.tab.path)
@@ -895,6 +1091,28 @@ watch(
 watch(themes.active, () => {
   view?.dispatch({ effects: highlightCompartment.reconfigure(activeHighlight()) })
 })
+
+watch(
+  () => ide.settings.value.semanticHighlighting,
+  (enabled) => {
+    if (!view) return
+    if (enabled) {
+      semanticRetries = 0
+      scheduleSemantic(view, 0)
+    } else clearSemantic(view)
+  }
+)
+
+watch(
+  () => ide.settings.value.inlayHints,
+  (enabled) => {
+    if (!view) return
+    if (enabled) {
+      inlayRetries = 0
+      scheduleInlay(view, 0)
+    } else clearInlay(view)
+  }
+)
 
 // Language servers publish diagnostics asynchronously and lint-on-save fills
 // the linter store after the fact; push both straight into the lint state so

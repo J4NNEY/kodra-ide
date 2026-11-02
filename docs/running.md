@@ -4,7 +4,7 @@ Panduan langkah demi langkah untuk menjalankan project `sokudo-clone` di mesin l
 aplikasi desktop Tauri maupun sebagai preview browser.
 
 - **Hasil akhir** yang diuji: Windows 11, Node 26.12.1, pnpm 9.15.0, Rust 1.96.0.
-- **Versi project** saat dokumen ini ditulis: `0.11.0`.
+- **Versi project** saat dokumen ini ditulis: `0.12.0`.
 - Semua perintah dijalankan dari folder project:
 
 ```powershell
@@ -177,6 +177,16 @@ Sejak 0.11.0, selain completion/hover/go-to-definition, Kudo memakai server yang
 | Outline / symbol picker file | `Ctrl+Shift+O` | `Code: Go to Symbol in File...` |
 | Cari symbol di seluruh workspace | `Ctrl+T` | `Code: Go to Symbol in Workspace...` |
 | Quick fix / code action | `Ctrl+.` | `Code: Quick Fix / Code Actions` |
+| Call hierarchy (pemanggil) | `Shift+Alt+H` | `Code: Show Call Hierarchy (Callers)` |
+| Call hierarchy (yang dipanggil) | - | `Code: Show Call Hierarchy (Callees)` |
+| Type hierarchy (supertype) | - | `Code: Show Type Hierarchy (Supertypes)` |
+| Type hierarchy (subtype) | - | `Code: Show Type Hierarchy (Subtypes)` |
+
+Sejak 0.12.0 editor juga memakai **semantic tokens** (pewarnaan token dari server di atas syntax
+tree, mengikuti warna tema) dan **inlay hints** (tipe hasil inferensi dan nama parameter yang
+ditampilkan inline, mis. `final Greeter greeter`). Keduanya default aktif dan bisa dimatikan di
+`Settings -> Editor -> Language server` lewat toggle **Semantic highlighting** dan **Inlay hints**;
+jawaban kosong saat server masih menganalisis akan dicoba ulang beberapa kali.
 
 Signature help muncul otomatis saat mengetik `(` atau `,` di dalam pemanggilan fungsi: parameter aktif
 disorot dan dokumentasi server ditampilkan. Simbol di bawah kursor juga disorot di semua
@@ -214,6 +224,10 @@ Install lokal di `node_modules` project selalu menang atas versi global. Format 
 save **default mati**; nyalakan di `Settings -> Editor` atau lewat command palette (`Format: ...`).
 `Shift+Alt+F` memformat file aktif tanpa menyimpan.
 
+Kalau tidak ada formatter eksternal untuk bahasa tersebut, Kudo meminta
+`textDocument/formatting` ke language server yang sedang berjalan (Dart memakai jalur ini). Toast-nya
+menyebut server, mis. `Formatted with dart language server`.
+
 ## 8. Lokasi data
 
 | Data | Lokasi |
@@ -224,8 +238,9 @@ save **default mati**; nyalakan di `Settings -> Editor` atau lewat command palet
 | Checkpoint agent | `<config dir>\checkpoints\<workspace-key>\` |
 | Riwayat chat, session restore, layout | `localStorage` WebView (per workspace) |
 
-Settings berisi tema, font, toggles `formatOnSave`/`lintOnSave`, daftar workspace terakhir, MCP
-server, dan API key agent. Untuk mengembalikan ke default, tutup Kudo lalu hapus `settings.json`.
+Settings berisi tema, font, toggles `formatOnSave`/`lintOnSave`, toggle `inlayHints` dan
+`semanticHighlighting`, daftar workspace terakhir, MCP server, dan API key agent. Untuk mengembalikan
+ke default, tutup Kudo lalu hapus `settings.json`.
 
 ## 9. Debugging lewat CDP (opsional)
 
@@ -276,6 +291,8 @@ pnpm install
 6. `Settings -> Editor` menampilkan daftar language server / formatter yang terdeteksi.
 7. Nyalakan **Format on save**, simpan file `.go` atau `.js` - muncul toast
    `Saved x.go - formatted with gofmt`.
+8. Buka file Dart: tipe hasil inferensi tampil inline (inlay hints), warna token dari server
+   mengikuti tema, dan `Shift+Alt+H` di atas sebuah method menampilkan daftar pemanggilnya.
 
 ## 12. Shortcut penting
 
@@ -295,6 +312,7 @@ pnpm install
 | `Ctrl+Alt+B` | jalankan default build task |
 | `F2` / `Shift+F12` | rename symbol / cari semua referensi |
 | `Ctrl+Shift+O` / `Ctrl+T` | symbol di file / symbol di seluruh workspace |
+| `Shift+Alt+H` | call hierarchy: pemanggil simbol di kursor |
 | `Ctrl+.` | quick fix / code action |
 
 Dokumen lain: [`README.md`](../README.md) untuk ringkasan fitur dan arsitektur,

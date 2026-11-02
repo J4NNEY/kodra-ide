@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { Boxes, FileCode2, ListTree, Search } from 'lucide-vue-next'
+import { Boxes, FileCode2, GitBranch, ListTree, Search } from 'lucide-vue-next'
 
 const ide = useIde()
 const intel = useCodeIntel()
@@ -117,6 +117,11 @@ function onKeydown(event: KeyboardEvent) {
           >
             <Boxes
               v-if="intel.list.value.mode === 'workspace-symbols'"
+              :size="13"
+              style="color: var(--text-faint); flex: 0 0 auto"
+            />
+            <GitBranch
+              v-else-if="intel.list.value.mode === 'hierarchy'"
               :size="13"
               style="color: var(--text-faint); flex: 0 0 auto"
             />
