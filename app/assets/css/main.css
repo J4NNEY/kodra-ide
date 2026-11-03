@@ -157,6 +157,36 @@
   --shadow-sm: 0 8px 22px -12px #0f172a33;
 }
 
+/* WebView2 is evergreen, but a pinned runtime can lag behind `color-mix`.
+   Without it every glass layer would resolve to nothing, so fall back to the
+   flat surface tokens rather than a transparent shell. */
+@supports not (background-color: color-mix(in srgb, #fff 50%, transparent)) {
+  :root {
+    --layer-chrome: var(--surface-3);
+    --layer-panel: var(--surface-3);
+    --layer-raised: var(--surface-4);
+    --layer-editor: var(--surface-0);
+    --layer-solid: var(--surface-3);
+
+    --fill-1: var(--glass);
+    --fill-2: var(--glass-strong);
+    --fill-3: var(--glass-strong);
+
+    --hairline: var(--border);
+    --hairline-strong: var(--border-strong);
+
+    --rim-top: inset 0 1px 0 0 #ffffff12;
+    --rim-bottom: inset 0 -1px 0 0 #00000059;
+
+    --backdrop-top: var(--canvas);
+    --backdrop-bottom: var(--canvas);
+  }
+
+  .app-shell::before {
+    background: linear-gradient(166deg, var(--backdrop-top), var(--backdrop-bottom));
+  }
+}
+
 * {
   box-sizing: border-box;
 }
