@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.1 — 2026-11-03
+
+A visual refresh of the whole shell. No features changed; this is the 1.0.0
+interface rebuilt around a glass motif.
+
+- **Floating panes** — the title bar, activity bar, sidebar, editor, panel and chat are now
+  rounded, translucent sheets sitting in a gutter instead of one flat grid. Splitters are
+  zero-width hit areas in the gaps, so the panes keep their full width.
+- **Ambient light field** — the shell sits on a soft accent/blue/purple wash with a fine grain
+  overlay, so translucent panes read as glass over a room rather than as flat rectangles.
+  Hairline rims and a specular top edge give each pane a lit upper border.
+- **Depth only where it matters** — backdrop blur is applied to floating surfaces only (menus,
+  command palette, dialogs, toasts, CodeMirror tooltips, the browser overlay). Full-height pane
+  blur was deliberately left out to keep scrolling smooth in WebView2.
+- **New token scale** — radii, fills, hairlines, shadows and easing are now shared tokens
+  (`--radius-*`, `--fill-*`, `--hairline*`, `--shadow-pane/pop`, `--ease`, `--dur`), so
+  component-level tweaks stay in step. Capsule editor tabs, thinner scrollbars, a visible
+  `:focus-visible` ring and `prefers-reduced-motion` support came with it.
+- **Theme-aware light mode** — light panes are white sheets over a blue-grey wall with higher
+  layer opacity, instead of the previous near-monochrome grey.
+- **Fixes found during the rework** — the bottom panel no longer pushes its actions out of view
+  when the editor gets narrow (the tab strip scrolls), and the title bar paints above the
+  workspace so its menus are not clipped.
+- **Fallback** — without `color-mix` support (a pinned WebView2 older than Chrome 111) the shell
+  reverts to solid surface tokens instead of rendering transparent panes.
+
 ## 1.0.0 — 2026-11-03
 
 The first public release. Kodra is the new name for the app formerly called Kudo.

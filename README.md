@@ -8,7 +8,7 @@ to run a tool or send a prompt.
 
 ## Install (Windows x64)
 
-1. Download `Kodra_1.0.0_x64-setup.exe` from the
+1. Download the `Kodra_<version>_x64-setup.exe` installer from the
    [latest release](https://github.com/J4NNEY/kodra-ide/releases/latest).
 2. Run it. Kodra installs for the current user (no administrator prompt), into your user profile,
    and creates Start Menu and desktop shortcuts.
@@ -21,7 +21,7 @@ The 1.0 installer is **not code-signed yet**, so Windows SmartScreen may show *U
 Verify the download with the SHA-256 published next to it before running:
 
 ```powershell
-Get-FileHash .\Kodra_1.0.0_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Kodra_*_x64-setup.exe -Algorithm SHA256
 ```
 
 Upgrades are manual for now: the built-in updater checks a feed you configure and verifies the
@@ -425,8 +425,8 @@ focus on bug fixes, security and polish. macOS and Linux builds are not shipped 
 Every release ships a `checksums.txt` and a `latest.json` containing the installer's SHA-256.
 
 ```powershell
-Get-FileHash .\Kodra_1.0.0_x64-setup.exe -Algorithm SHA256
-Get-AuthenticodeSignature .\Kodra_1.0.0_x64-setup.exe   # Valid once signing is configured
+Get-FileHash .\Kodra_*_x64-setup.exe -Algorithm SHA256
+Get-AuthenticodeSignature .\Kodra_*_x64-setup.exe   # Valid once signing is configured
 ```
 
 Until a code-signing certificate is configured the installer is unsigned, so SmartScreen warnings

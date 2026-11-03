@@ -1,6 +1,6 @@
 [package]
 name = "kodra"
-version = "1.0.0"
+version = "1.0.1"
 description = "Kodra — a fast, focused desktop IDE for code, terminals, databases and AI agents"
 authors = ["Kodra contributors"]
 edition = "2021"
