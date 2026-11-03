@@ -1,14 +1,13 @@
 # Cara menjalankan Kodra
 
-Panduan langkah demi langkah untuk menjalankan project `sokodra-clone` di mesin lokal, baik sebagai
+Panduan langkah demi langkah untuk menjalankan Kodra di mesin lokal, baik sebagai
 aplikasi desktop Tauri maupun sebagai preview browser.
 
 - **Hasil akhir** yang diuji: Windows 11, Node 26.12.1, pnpm 9.15.0, Rust 1.96.0.
-- **Versi project** saat dokumen ini ditulis: `1.0.0`.
 - Semua perintah dijalankan dari folder project:
 
 ```powershell
-cd C:\belajar\ReaProject\Gokuue\sokodra-clone
+cd C:\tools\kodra
 ```
 
 ## 0. Ringkasan perintah

@@ -17,14 +17,14 @@ to run a tool or send a prompt.
 Requirements: Windows 10 1809+ or Windows 11, x64. The installer fetches the Evergreen WebView2
 runtime if it is missing.
 
-The 1.0 installer is **not code-signed yet**, so Windows SmartScreen may show *Unknown publisher*.
+The installer is **not code-signed yet**, so Windows SmartScreen may show *Unknown publisher*.
 Verify the download with the SHA-256 published next to it before running:
 
 ```powershell
 Get-FileHash .\Kodra_*_x64-setup.exe -Algorithm SHA256
 ```
 
-Upgrades are manual for now: the built-in updater checks a feed you configure and verifies the
+Updates are opt-in: the built-in updater checks a feed you configure and verifies the
 installer's SHA-256 before offering **Install** (see [`docs/updater.md`](docs/updater.md)). Point
 **Settings → Update feed** at
 `https://github.com/J4NNEY/kodra-ide/releases/latest/download/latest.json`.
@@ -32,6 +32,18 @@ installer's SHA-256 before offering **Install** (see [`docs/updater.md`](docs/up
 Kodra keeps settings in `%APPDATA%\app.kodra.desktop`. On first launch after the rename it copies
 settings, checkpoints and extensions from the old `dev.kudo.desktop` folder without deleting the old
 data.
+
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [`docs/running.md`](docs/running.md) | Step-by-step setup, toolchains and troubleshooting (in Indonesian) |
+| [`docs/releasing.md`](docs/releasing.md) | Release checklist, code-signing variables, update-feed hosting |
+| [`docs/updater.md`](docs/updater.md) | Update manifest format and verification rules |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release notes |
+| [`SECURITY.md`](SECURITY.md) | Threat model and private vulnerability reporting |
+| [`PRIVACY.md`](PRIVACY.md) | What is stored locally and what leaves the machine |
+| [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) | Third-party licences |
 
 ## Features
 
@@ -83,8 +95,8 @@ pnpm icons        # regenerate the icon set from scripts/make-icons.ps1
 ```
 
 A step-by-step setup and run guide (in Indonesian, covering prerequisites, toolchains and
-troubleshooting) lives in [`docs/running.md`](docs/running.md). The release checklist, code-signing
-variables and update-feed hosting are in [`docs/releasing.md`](docs/releasing.md).
+troubleshooting) lives in [`docs/running.md`](docs/running.md); the [Documentation](#documentation)
+table above links the rest.
 
 Language servers are discovered from `PATH`; install the one for your language
 (for example `rustup component add rust-analyzer`, or
@@ -417,8 +429,8 @@ copy. See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Project status
 
-Kodra 1.0 targets **Windows x64**. The feature set is frozen until 1.0 ships; after that, releases
-focus on bug fixes, security and polish. macOS and Linux builds are not shipped and untested.
+Kodra 1.x targets **Windows x64** only. The feature set is frozen: releases focus on bug fixes,
+security and polish. macOS and Linux builds are not shipped and untested.
 
 ## Verifying a release
 

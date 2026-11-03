@@ -11,12 +11,12 @@ without a click on **Install**.
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "notes": "Faster startup and a new network panel.",
   "pub_date": "2026-02-01T10:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/J4NNEY/kodra-ide/releases/download/v1.0.0/Kodra_1.0.0_x64-setup.exe",
+      "url": "https://github.com/J4NNEY/kodra-ide/releases/download/v1.1.0/Kodra_1.1.0_x64-setup.exe",
       "sha256": "9f2c…64 hex characters…"
     }
   }

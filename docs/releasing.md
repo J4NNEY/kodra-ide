@@ -1,13 +1,13 @@
 # Releasing Kodra
 
-Kodra 1.0 ships to Windows x64 as a per-user NSIS installer. This page covers the version bump, the
+Kodra ships to Windows x64 as a per-user NSIS installer. This page covers the version bump, the
 build, code signing, the update feed and the manual smoke test.
 
 ## 1. Prerequisites
 
 | Tool | Version | Notes |
 | --- | --- | --- |
-| Windows | 10 1809+ / 11, x64 | The 1.0 target |
+| Windows | 10 1809+ / 11, x64 | Supported target |
 | Node.js | 22 LTS or newer | `node --version` |
 | pnpm | 9 | `corepack enable` then `corepack prepare pnpm@9 --activate` |
 | Rust | stable, MSVC toolchain | `rustup default stable-x86_64-pc-windows-msvc` |
@@ -107,7 +107,7 @@ every push and pull request.
 `.github/workflows/release.yml` builds on a `v*` tag:
 
 ```powershell
-git tag v1.0.0
+git tag v1.1.0
 git push origin main --tags
 ```
 

@@ -765,7 +765,7 @@ watch(
                 <div>
                   <h3 style="margin: 0 0 2px">Kodra {{ appInfo?.version ?? 'dev' }}</h3>
                   <p class="hint" style="margin: 0">
-                    A clean-room desktop IDE built with Tauri v2, Nuxt 3 and Rust.
+                    A desktop IDE built with Tauri v2, Nuxt 3 and Rust.
                   </p>
                 </div>
               </div>

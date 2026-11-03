@@ -73,7 +73,7 @@ function startPanelDrag(event: PointerEvent) {
             <div class="empty-mark">K</div>
             <h2>{{ ide.workspace.value ? ide.workspace.value.name : 'Welcome to Kodra' }}</h2>
             <p v-if="!ide.workspace.value">
-              A clean-room desktop IDE for code, terminals and AI agents. Open a folder to start
+              A desktop IDE for code, terminals and AI agents. Open a folder to start
               editing, or reconnect an existing project from the list below.
             </p>
             <p v-else>
