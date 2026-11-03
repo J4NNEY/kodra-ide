@@ -29,6 +29,12 @@ manifest as release notes. `scripts/release.ps1` refuses to build when the three
 
 ## 3. Build and package
 
+Stop the dev server first. `pnpm dev` and `pnpm build` share `.nuxt` and `.output` in the same
+checkout, and when both run they delete each other's `.nuxt/dist`. The build then emits an
+`index.html` that points at the dev server, and the packaged app opens a blank window.
+`scripts/release.ps1` refuses to start while something is listening on the `devUrl` port, so
+`NUXT_IGNORE_LOCK=1` is never the right answer here.
+
 ```powershell
 pnpm release:win
 ```
