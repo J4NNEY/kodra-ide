@@ -13,13 +13,14 @@
     "url": "https://github.com/J4NNEY/kodra-ide/issues"
   },
   "scripts": {
+    "postinstall": "nuxt prepare",
     "dev": "nuxt dev --port 3000",
     "build": "nuxt generate",
     "preview": "nuxt preview",
     "tauri": "tauri",
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
-    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "typecheck": "nuxt prepare && vue-tsc --noEmit -p tsconfig.json",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "icons": "powershell -ExecutionPolicy Bypass -File scripts/make-icons.ps1",
     "release:win": "powershell -ExecutionPolicy Bypass -File scripts/release.ps1"

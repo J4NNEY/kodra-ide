@@ -91,7 +91,12 @@ try {
     if (-not $Notes) {
         # Pull the notes for this version out of CHANGELOG.md when possible.
         if (Test-Path -LiteralPath 'CHANGELOG.md') {
-            $lines = Get-Content -LiteralPath 'CHANGELOG.md'
+            # Read as UTF-8 explicitly: Windows PowerShell 5.1 defaults to the
+            # ANSI code page, which mangles em dashes and arrows in the notes.
+            $lines = [System.IO.File]::ReadAllLines(
+                (Join-Path $root 'CHANGELOG.md'),
+                [System.Text.UTF8Encoding]::new($false)
+            )
             $start = ($lines | Select-String -Pattern "^##\s*\[?$([regex]::Escape($version))\]?" | Select-Object -First 1).LineNumber
             if ($start) {
                 $body = @()
