@@ -58,15 +58,15 @@ const MAX_CACHED_FILES = 40
 export function useFormat() {
   // Same state key as `useIde`, so toggles and the settings dialog stay in sync
   // without making this composable depend on the IDE one.
-  const settings = useState<Settings>('kudo:settings', () => structuredClone(defaultSettings))
-  const tools = useState<FormatTool[]>('kudo:format-tools', () => [])
-  const detectedAt = useState<number>('kudo:format-detected-at', () => 0)
-  const busy = useState<boolean>('kudo:format-busy', () => false)
-  const lastTool = useState<string>('kudo:format-last-tool', () => '')
-  const lastPath = useState<string>('kudo:format-last-path', () => '')
-  const issues = useState<Record<string, LintIssue[]>>('kudo:lint-issues', () => ({}))
-  const errors = useState<Record<string, string>>('kudo:lint-errors', () => ({}))
-  const lintedAt = useState<Record<string, number>>('kudo:lint-last', () => ({}))
+  const settings = useState<Settings>('kodra:settings', () => structuredClone(defaultSettings))
+  const tools = useState<FormatTool[]>('kodra:format-tools', () => [])
+  const detectedAt = useState<number>('kodra:format-detected-at', () => 0)
+  const busy = useState<boolean>('kodra:format-busy', () => false)
+  const lastTool = useState<string>('kodra:format-last-tool', () => '')
+  const lastPath = useState<string>('kodra:format-last-path', () => '')
+  const issues = useState<Record<string, LintIssue[]>>('kodra:lint-issues', () => ({}))
+  const errors = useState<Record<string, string>>('kodra:lint-errors', () => ({}))
+  const lintedAt = useState<Record<string, number>>('kodra:lint-last', () => ({}))
 
   const formatOnSave = computed(() => settings.value.formatOnSave)
   const lintOnSave = computed(() => settings.value.lintOnSave)

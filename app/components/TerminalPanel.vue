@@ -83,7 +83,7 @@ async function loadShells() {
   try {
     shells.value = await call<TerminalShellInfo[]>('terminal_shells')
   } catch (err) {
-    console.warn('[kudo] could not list shells', err)
+    console.warn('[kodra] could not list shells', err)
   }
 }
 
@@ -110,7 +110,7 @@ function newSession(shell: TerminalShellInfo = defaultShell.value) {
     suffix++
     label = `${name} (${suffix})`
   }
-  const id = `kudo-${Date.now().toString(36)}-${++sessionSeq}`
+  const id = `kodra-${Date.now().toString(36)}-${++sessionSeq}`
   sessions.value = [
     ...sessions.value,
     {
@@ -200,8 +200,8 @@ function stamp(ms: number) {
 }
 
 onMounted(async () => {
-  window.addEventListener('kudo:terminal-clear', onClearEvent)
-  window.addEventListener('kudo:terminal-close', onCloseEvent)
+  window.addEventListener('kodra:terminal-clear', onClearEvent)
+  window.addEventListener('kodra:terminal-close', onCloseEvent)
   document.addEventListener('click', onDocClick)
   document.addEventListener('keydown', onKeydown)
   await loadShells()
@@ -209,8 +209,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('kudo:terminal-clear', onClearEvent)
-  window.removeEventListener('kudo:terminal-close', onCloseEvent)
+  window.removeEventListener('kodra:terminal-clear', onClearEvent)
+  window.removeEventListener('kodra:terminal-close', onCloseEvent)
   document.removeEventListener('click', onDocClick)
   document.removeEventListener('keydown', onKeydown)
   void call('pty_kill_all').catch(() => {})

@@ -6,7 +6,7 @@ export type TaskStatus = 'idle' | 'running' | 'passed' | 'failed' | 'cancelled'
 export interface TaskDef {
   id: string
   label: string
-  /** `kudo`, `package` or `make`. */
+  /** `kodra`, `package` or `make`. */
   source: string
   /** Command line preview shown next to the label. */
   detail: string
@@ -39,7 +39,7 @@ interface ExitPayload {
 const OUTPUT_LIMIT = 4000
 
 const SOURCE_LABEL: Record<string, string> = {
-  kudo: 'Kudo',
+  kodra: 'Kodra',
   package: 'Package',
   make: 'Make'
 }
@@ -49,30 +49,30 @@ const SOURCE_LABEL: Record<string, string> = {
 let listening = false
 
 export function useTasks() {
-  const tasks = useState<TaskDef[]>('kudo:tasks', () => [])
-  const toolchain = useState<Record<string, string>>('kudo:tasks-toolchain', () => ({}))
-  const loading = useState<boolean>('kudo:tasks-loading', () => false)
-  const error = useState<string>('kudo:tasks-error', () => '')
-  const detectedAt = useState<number>('kudo:tasks-detected-at', () => 0)
+  const tasks = useState<TaskDef[]>('kodra:tasks', () => [])
+  const toolchain = useState<Record<string, string>>('kodra:tasks-toolchain', () => ({}))
+  const loading = useState<boolean>('kodra:tasks-loading', () => false)
+  const error = useState<string>('kodra:tasks-error', () => '')
+  const detectedAt = useState<number>('kodra:tasks-detected-at', () => 0)
 
-  const runStatus = useState<TaskStatus>('kudo:tasks-run-status', () => 'idle')
-  const runId = useState<string | null>('kudo:tasks-run-id', () => null)
-  const runLabel = useState<string>('kudo:tasks-run-label', () => '')
-  const runCwd = useState<string>('kudo:tasks-run-cwd', () => '')
-  const current = useState<TaskDef | null>('kudo:tasks-current', () => null)
-  const lastTaskId = useState<string>('kudo:tasks-last-id', () => '')
-  const cancelled = useState<boolean>('kudo:tasks-cancelled', () => false)
-  const exitCode = useState<number | null>('kudo:tasks-exit-code', () => null)
-  const durationMs = useState<number>('kudo:tasks-duration', () => 0)
-  const output = useState<TaskOutputLine[]>('kudo:tasks-output', () => [])
-  const results = useState<Record<string, TaskStatus>>('kudo:tasks-results', () => ({}))
+  const runStatus = useState<TaskStatus>('kodra:tasks-run-status', () => 'idle')
+  const runId = useState<string | null>('kodra:tasks-run-id', () => null)
+  const runLabel = useState<string>('kodra:tasks-run-label', () => '')
+  const runCwd = useState<string>('kodra:tasks-run-cwd', () => '')
+  const current = useState<TaskDef | null>('kodra:tasks-current', () => null)
+  const lastTaskId = useState<string>('kodra:tasks-last-id', () => '')
+  const cancelled = useState<boolean>('kodra:tasks-cancelled', () => false)
+  const exitCode = useState<number | null>('kodra:tasks-exit-code', () => null)
+  const durationMs = useState<number>('kodra:tasks-duration', () => 0)
+  const output = useState<TaskOutputLine[]>('kodra:tasks-output', () => [])
+  const results = useState<Record<string, TaskStatus>>('kodra:tasks-results', () => ({}))
 
   const active = computed(() => runStatus.value === 'running')
   const hasTasks = computed(() => tasks.value.length > 0)
   const taskCount = computed(() => tasks.value.length)
 
   const groups = computed(() => {
-    const order = ['kudo', 'package', 'make']
+    const order = ['kodra', 'package', 'make']
     const buckets = new Map<string, TaskDef[]>()
     for (const task of tasks.value) {
       const list = buckets.get(task.source) ?? []
@@ -342,9 +342,9 @@ export function useTasks() {
 function mockTasks(): TaskDef[] {
   return [
     {
-      id: 'kudo:0',
+      id: 'kodra:0',
       label: 'Build',
-      source: 'kudo',
+      source: 'kodra',
       detail: 'pnpm build',
       command: 'pnpm build',
       cwd: '',

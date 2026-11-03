@@ -102,11 +102,11 @@ const approvalResolvers = new Map<string, (ok: boolean) => void>()
 export function useChat() {
   const ide = useIde()
   const checkpoints = useCheckpoints()
-  const messages = useState<ChatMessage[]>('kudo:chat-messages', () => [])
-  const busy = useState<boolean>('kudo:chat-busy', () => false)
-  const requestId = useState<string | null>('kudo:chat-request', () => null)
-  const loadedKey = useState<string>('kudo:chat-key', () => '')
-  const approvals = useState<PendingApproval[]>('kudo:chat-approvals', () => [])
+  const messages = useState<ChatMessage[]>('kodra:chat-messages', () => [])
+  const busy = useState<boolean>('kodra:chat-busy', () => false)
+  const requestId = useState<string | null>('kodra:chat-request', () => null)
+  const loadedKey = useState<string>('kodra:chat-key', () => '')
+  const approvals = useState<PendingApproval[]>('kodra:chat-approvals', () => [])
 
   function requestApproval(toolCall: ToolCall, title: string, detail: string) {
     const id = crypto.randomUUID()
@@ -127,7 +127,7 @@ export function useChat() {
   }
 
   const storageKey = computed(() =>
-    `kudo:chat:${ide.workspace.value?.path ?? 'scratch'}`
+    `kodra:chat:${ide.workspace.value?.path ?? 'scratch'}`
   )
 
   function persist() {

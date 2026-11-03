@@ -10,7 +10,7 @@ const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
 const props = defineProps<{ groupId: EditorGroupId }>()
 
 const ide = useIde()
-const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
+const cursor = useState('kodra:cursor', () => ({ line: 1, column: 1, selected: 0 }))
 const dragPath = ref<string | null>(null)
 
 const group = computed(() => ide.groups.value.find((item) => item.id === props.groupId) ?? null)
@@ -59,7 +59,7 @@ function onDragStart(event: DragEvent, tab: EditorTab) {
   if (!event.dataTransfer) return
   event.dataTransfer.effectAllowed = 'move'
   event.dataTransfer.setData(
-    'application/x-kudo-tab',
+    'application/x-kodra-tab',
     JSON.stringify({ path: tab.path, groupId: props.groupId })
   )
   event.dataTransfer.setData('text/plain', tab.path)
@@ -73,7 +73,7 @@ function onDragOver(event: DragEvent) {
 
 function onDrop(event: DragEvent) {
   dragPath.value = null
-  const raw = event.dataTransfer?.getData('application/x-kudo-tab')
+  const raw = event.dataTransfer?.getData('application/x-kodra-tab')
   if (!raw) return
   try {
     const payload = JSON.parse(raw) as { path?: string; groupId?: EditorGroupId }

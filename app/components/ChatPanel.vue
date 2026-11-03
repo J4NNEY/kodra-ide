@@ -24,7 +24,7 @@ import type { CheckpointSummary } from '../composables/useCheckpoints'
 const ide = useIde()
 const chat = useChat()
 const checkpoints = useCheckpoints()
-const settingsTab = useState<string>('kudo:settings-tab', () => 'appearance')
+const settingsTab = useState<string>('kodra:settings-tab', () => 'appearance')
 
 const input = ref('')
 const scrollEl = ref<HTMLDivElement | null>(null)
@@ -184,11 +184,11 @@ watch(
 onMounted(() => {
   chat.load()
   scrollToBottom(true)
-  window.addEventListener('kudo:focus-composer', focusComposer)
+  window.addEventListener('kodra:focus-composer', focusComposer)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('kudo:focus-composer', focusComposer)
+  window.removeEventListener('kodra:focus-composer', focusComposer)
 })
 </script>
 
@@ -341,7 +341,7 @@ onBeforeUnmount(() => {
           ref="composerEl"
           v-model="input"
           rows="2"
-          placeholder="Ask Kudo to build, explain or fix something…"
+          placeholder="Ask Kodra to build, explain or fix something…"
           spellcheck="false"
           @keydown="onKeydown"
           @input="autoSize"

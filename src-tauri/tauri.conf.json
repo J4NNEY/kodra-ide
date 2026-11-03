@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Kudo",
-  "version": "0.12.1",
-  "identifier": "dev.kudo.desktop",
+  "productName": "Kodra",
+  "version": "1.0.0",
+  "identifier": "app.kodra.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:3000",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Kudo",
+        "title": "Kodra",
         "width": 1360,
         "height": 820,
         "minWidth": 900,
@@ -28,14 +28,29 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws: wss:; frame-src http: https:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'"
     }
   },
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "publisher": "Kodra",
+    "copyright": "© 2026 Kodra contributors. All rights reserved.",
+    "category": "DeveloperTool",
+    "license": "Proprietary",
+    "licenseFile": "../LICENSE",
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"],
-    "shortDescription": "Kudo — a fast, focused desktop IDE",
-    "longDescription": "Kudo is a clean-room desktop IDE clone built with Tauri v2 and Nuxt 3, featuring a code editor, terminal, git panel and an AI coding agent."
+    "shortDescription": "A fast desktop IDE for code, terminals, databases and AI agents",
+    "longDescription": "Kodra is a desktop IDE built with Tauri v2 and Nuxt 3, featuring a code editor, terminal, git panel, debugger, SQL browser, in-app browser preview and an AI coding agent.",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English", "Indonesian"]
+      },
+      "signCommand": {
+        "cmd": "powershell",
+        "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "../scripts/sign-windows.ps1", "%1"]
+      }
+    }
   }
 }

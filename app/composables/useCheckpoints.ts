@@ -32,14 +32,14 @@ export function useCheckpoints() {
   const ide = useIde()
 
   /** Id of the checkpoint for the turn that is currently running (created lazily). */
-  const turnId = useState<string | null>('kudo:checkpoint-turn', () => null)
-  const turnLabel = useState<string>('kudo:checkpoint-label', () => '')
+  const turnId = useState<string | null>('kodra:checkpoint-turn', () => null)
+  const turnLabel = useState<string>('kodra:checkpoint-label', () => '')
   const summaries = useState<Record<string, CheckpointSummary>>(
-    'kudo:checkpoint-cache',
+    'kodra:checkpoint-cache',
     () => ({})
   )
-  const recent = useState<CheckpointSummary[]>('kudo:checkpoint-list', () => [])
-  const loading = useState<boolean>('kudo:checkpoint-loading', () => false)
+  const recent = useState<CheckpointSummary[]>('kodra:checkpoint-list', () => [])
+  const loading = useState<boolean>('kodra:checkpoint-loading', () => false)
 
   /** Start a fresh checkpoint scope; the first snapshot creates the checkpoint. */
   function beginTurn(label = '') {
@@ -138,7 +138,7 @@ export function useCheckpoints() {
       const result = await call<RestoreResult>('checkpoint_restore', { id })
       if (!result) return null
       await reloadTabs(summary?.files ?? [])
-      useState<number>('kudo:tree-version', () => 0).value++
+      useState<number>('kodra:tree-version', () => 0).value++
       useGit().refresh()
       delete summaries.value[id]
       summaries.value = { ...summaries.value }

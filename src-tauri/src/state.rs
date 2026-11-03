@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{
         atomic::AtomicBool,
         Arc,
@@ -33,7 +33,7 @@ impl Default for AiSettings {
             api_key: String::new(),
             temperature: 0.3,
             max_tokens: 4096,
-            system_prompt: "You are Kudo's coding agent. You can inspect and edit files in the open workspace using the provided tools. Prefer small, verifiable changes and explain what you did.".into(),
+            system_prompt: "You are Kodra's coding agent. You can inspect and edit files in the open workspace using the provided tools. Prefer small, verifiable changes and explain what you did.".into(),
             agent_mode: true,
             auto_approve: false,
         }
@@ -215,6 +215,55 @@ pub struct DapSession {
     pub attach: bool,
 }
 
+/// Copy settings, checkpoints and extensions from the pre-rename config
+/// directory the first time Kodra starts. The old folder is left untouched so
+/// users can roll back without losing data.
+pub fn migrate_legacy_data(config_dir: &Path) {
+    if config_dir.join("settings.json").exists() {
+        return;
+    }
+    let Some(parent) = config_dir.parent() else {
+        return;
+    };
+    for legacy_name in ["dev.kudo.desktop", "dev.kodra.desktop"] {
+        let legacy = parent.join(legacy_name);
+        if !legacy.is_dir() {
+            continue;
+        }
+        match copy_dir_all(&legacy, config_dir) {
+            Ok(()) => break,
+            Err(err) => eprintln!("kodra: could not migrate {}: {err}", legacy.display()),
+        }
+    }
+}
+
+fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let target = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir_all(&entry.path(), &target)?;
+        } else if !target.exists() {
+            std::fs::copy(entry.path(), target)?;
+        }
+    }
+    Ok(())
+}
+
+/// Rewrite the settings values that carried the old name. Only known shipped
+/// defaults are touched; user themes and custom prompts stay as they are.
+fn migrate_settings(settings: &mut Settings) {
+    settings.theme = match settings.theme.as_str() {
+        "kudo-dark" => "kodra-dark".into(),
+        "kudo-light" => "kodra-light".into(),
+        other => other.to_string(),
+    };
+    if settings.ai.system_prompt.starts_with("You are Kudo's coding agent.") {
+        settings.ai.system_prompt = settings.ai.system_prompt.replacen("Kudo", "Kodra", 1);
+    }
+}
+
 #[derive(Default)]
 pub struct AppState {
     pub workspace: RwLock<Option<PathBuf>>,
@@ -242,12 +291,13 @@ impl AppState {
     pub fn load_settings(&self) {
         if let Ok(raw) = std::fs::read_to_string(self.settings_path()) {
             if let Ok(mut parsed) = serde_json::from_str::<Settings>(&raw) {
-                // Up to 0.12.0 the default home pointed at Kudo's own dev server,
+                // Up to 0.12.0 the default home pointed at Kodra's own dev server,
                 // which made the Browser pane embed the IDE inside itself. Treat
                 // that legacy default as "unset" so the start panel is shown.
                 if parsed.browser_home.trim() == "http://localhost:3000" {
                     parsed.browser_home.clear();
                 }
+                migrate_settings(&mut parsed);
                 *self.settings.write() = parsed;
             }
         }
@@ -306,10 +356,132 @@ impl AppState {
 impl Drop for AppState {
     fn drop(&mut self) {
         // Kill terminal shells so no process keeps a workspace folder locked
-        // after Kudo exits.
+        // after Kodra exits.
         let mut sessions = self.ptys.lock();
         for (_, mut session) in sessions.drain() {
             session.terminate();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn scratch(label: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("kodra-test-{label}-{nanos}"));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn migrates_settings_checkpoints_and_extensions() {
+        let root = scratch("migrate");
+        let legacy = root.join("dev.kudo.desktop");
+        let config = root.join("app.kodra.desktop");
+        std::fs::create_dir_all(legacy.join("checkpoints").join("ws")).unwrap();
+        std::fs::create_dir_all(legacy.join("extensions").join("ember")).unwrap();
+        std::fs::write(legacy.join("settings.json"), "{\"theme\":\"dark\"}").unwrap();
+        std::fs::write(legacy.join("checkpoints").join("ws").join("a.json"), "cp").unwrap();
+        std::fs::write(
+            legacy.join("extensions").join("ember").join("package.json"),
+            "{\"name\":\"ember\"}",
+        )
+        .unwrap();
+
+        migrate_legacy_data(&config);
+
+        assert_eq!(
+            std::fs::read_to_string(config.join("settings.json")).unwrap(),
+            "{\"theme\":\"dark\"}"
+        );
+        assert!(config.join("checkpoints").join("ws").join("a.json").exists());
+        assert!(config
+            .join("extensions")
+            .join("ember")
+            .join("package.json")
+            .exists());
+        // The legacy folder is left in place for rollback.
+        assert!(legacy.join("settings.json").exists());
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn migration_never_overwrites_existing_settings() {
+        let root = scratch("no-overwrite");
+        let legacy = root.join("dev.kudo.desktop");
+        let config = root.join("app.kodra.desktop");
+        std::fs::create_dir_all(&legacy).unwrap();
+        std::fs::create_dir_all(&config).unwrap();
+        std::fs::write(legacy.join("settings.json"), "old").unwrap();
+        std::fs::write(config.join("settings.json"), "new").unwrap();
+
+        migrate_legacy_data(&config);
+
+        assert_eq!(
+            std::fs::read_to_string(config.join("settings.json")).unwrap(),
+            "new"
+        );
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn migration_falls_back_to_intermediate_folder() {
+        let root = scratch("fallback");
+        let intermediate = root.join("dev.kodra.desktop");
+        let config = root.join("app.kodra.desktop");
+        std::fs::create_dir_all(&intermediate).unwrap();
+        std::fs::write(intermediate.join("settings.json"), "intermediate").unwrap();
+
+        migrate_legacy_data(&config);
+
+        assert_eq!(
+            std::fs::read_to_string(config.join("settings.json")).unwrap(),
+            "intermediate"
+        );
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn migration_is_a_noop_without_legacy_data() {
+        let root = scratch("noop");
+        let config = root.join("app.kodra.desktop");
+
+        migrate_legacy_data(&config);
+
+        assert!(!config.exists());
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn rewrites_pre_rename_settings_values() {
+        let mut settings = Settings::default();
+        settings.theme = "kudo-light".into();
+        settings.ai.system_prompt = "You are Kudo's coding agent. Be brief.".into();
+
+        migrate_settings(&mut settings);
+
+        assert_eq!(settings.theme, "kodra-light");
+        assert_eq!(
+            settings.ai.system_prompt,
+            "You are Kodra's coding agent. Be brief."
+        );
+    }
+
+    #[test]
+    fn leaves_custom_settings_alone() {
+        let mut settings = Settings::default();
+        settings.theme = "my-extension-theme".into();
+        settings.ai.system_prompt = "Review Go code carefully.".into();
+
+        migrate_settings(&mut settings);
+
+        assert_eq!(settings.theme, "my-extension-theme");
+        assert_eq!(settings.ai.system_prompt, "Review Go code carefully.");
     }
 }

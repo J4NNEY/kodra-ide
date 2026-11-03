@@ -12,7 +12,7 @@ export interface LogLine {
 let seq = 0
 
 export function useOutputLog() {
-  const lines = useState<LogLine[]>('kudo:output-log', () => [])
+  const lines = useState<LogLine[]>('kodra:output-log', () => [])
 
   function push(channel: string, text: string) {
     const entry: LogLine = { id: ++seq, time: Date.now(), channel, text }

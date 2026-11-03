@@ -9,14 +9,14 @@ use tauri::State;
 use crate::state::AppState;
 use crate::util::{resolve_in_workspace, which};
 
-/// Largest buffer Kudo will hand to a formatter (and read back).
+/// Largest buffer Kodra will hand to a formatter (and read back).
 const MAX_TEXT_BYTES: usize = 2 * 1024 * 1024;
 /// How long one formatter/linter invocation may take before it is killed.
 const TOOL_TIMEOUT: Duration = Duration::from_secs(20);
 /// Keep the raw lint output small when it cannot be parsed.
 const MAX_RAW_OUTPUT: usize = 6000;
 
-/// One formatter or linter Kudo knows how to run.
+/// One formatter or linter Kodra knows how to run.
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolInfo {

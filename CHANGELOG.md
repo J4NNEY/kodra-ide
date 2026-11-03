@@ -1,20 +1,49 @@
 # Changelog
 
+## 1.0.0 — 2026-11-03
+
+The first public release. Kodra is the new name for the app formerly called Kudo.
+
+- **Rename and migration** — the product, crate, binary, bundle identifier (`app.kodra.desktop`) and
+  user-visible strings are now Kodra. On first launch, settings, checkpoints and extensions are
+  copied from the old `dev.kudo.desktop` folder without deleting it, `localStorage` keys move from
+  `kudo:*` to `kodra:*`, and `.kudo/skills` / `.kudo/tasks.json` keep working when no `.kodra`
+  folder exists. New projects use `.kodra`.
+- **Windows installer** — per-user NSIS install with English and Indonesian UI, publisher and
+  copyright metadata, a new full icon set (16–256 px ICO), and an optional `signCommand` pipeline
+  ready for a code-signing certificate.
+- **Hardened updater** — feeds must use HTTPS (localhost is the only plain-HTTP exception), every
+  download needs a 64-hex SHA-256 that is checked before anything is written, downloads are capped at
+  300 MB, file names are reduced to their final path component, and installers are only launched from
+  `<temp>\kodra-updates` and only for `.exe`/`.msi`.
+- **Content Security Policy** — the webview now runs with an explicit CSP instead of `csp: null`,
+  while still allowing remote images, browser-preview frames and MCP/localhost connections.
+- **Release infrastructure** — GitHub Actions CI (typecheck, Rust tests, clippy, frontend build) and
+  a tag-driven Windows release workflow, `pnpm release:win` for a hashed installer plus
+  `latest.json`, and unit tests for version comparison, URL policy, file-name sanitising, checksum
+  verification and legacy-data migration.
+- **Documentation and legal** — public README, `docs/releasing.md`, rewritten `docs/updater.md`,
+  `SECURITY.md`, `PRIVACY.md` and a proprietary `LICENSE` with third-party notices.
+
+Everything from 0.12.0 and 0.12.1 is included: semantic tokens, inlay hints, call/type hierarchy,
+server-side formatting, workspace symbols, signature help, occurrence highlighting, auto-import
+completions, and the browser-pane self-embedding fix.
+
 ## 0.12.1 — 2026-11-02
 
-The in-app browser no longer embeds Kudo itself.
+The in-app browser no longer embeds Kodra itself.
 
 - **Browser start panel** — opening the pane without a URL (or with an empty *Browser preview
   home*) shows a short start panel instead of guessing `http://localhost:3000`. That guess embedded
-  Kudo's own Nuxt dev server in the pane whenever the IDE ran from source.
-- **Self-origin guard** — when the address resolves to the origin Kudo is served from, the pane
+  Kodra's own Nuxt dev server in the pane whenever the IDE ran from source.
+- **Self-origin guard** — when the address resolves to the origin Kodra is served from, the pane
   explains the problem and offers **Open in system browser** instead of rendering a second IDE
   inside itself.
 - **Last URL remembered** — the pane restores the last previewed URL from `localStorage`;
   **Reload** no longer rewrites the configured home, and **Set as home** is disabled until a
   non-self page is open.
 - `Browser: Preview localhost:3000` is now **Browser: Preview Local URL…** and asks for the
-  address, so it cannot hard-code Kudo's own port.
+  address, so it cannot hard-code Kodra's own port.
 - The default *Browser preview home* is now empty; settings that still contain the old default
   (`http://localhost:3000`) are cleared when they load, so the start panel appears instead.
 
@@ -56,7 +85,7 @@ Code intelligence now covers the whole workspace and shows more context at the c
 - **Occurrence highlighting** — every read and write of the symbol under the cursor is decorated in
   the editor (writes are stronger), so a variable's uses are visible without selecting the word.
 - **Auto-import completions** — completions now honour their `textEdit` replacement range and any
-  `additionalTextEdits`. Dart defers auto-import edits to `completionItem/resolve`; Kudo resolves
+  `additionalTextEdits`. Dart defers auto-import edits to `completionItem/resolve`; Kodra resolves
   those candidates before the popup opens, so picking an unimported class inserts the class *and* its
   `import` in a single undo step.
 - Servers that omit `textEdit`/`additionalTextEdits` and snippet completions keep working as before.
@@ -70,7 +99,7 @@ intelligence stack instead of falling back to plaintext.
   `bin/cache/dart-sdk`) and started per Dart file, so completion, hover, go-to-definition, rename,
   references, document symbols, quick fixes and diagnostics all work in Flutter apps and Dart
   packages.
-- **Flutter SDK preference** — when `flutter` is installed, Kudo picks the Dart SDK bundled with it
+- **Flutter SDK preference** — when `flutter` is installed, Kodra picks the Dart SDK bundled with it
   so analysis matches the SDK version the project builds with; standalone Dart is the fallback.
 - **Dart + Flutter syntax** — added the Dart mode plus Kotlin, Java, Swift, XML, Groovy/Gradle,
   `.properties`, C/C++, C#, Ruby, Lua and Protocol Buffers to the editor language map, and `.arb`
@@ -83,7 +112,7 @@ intelligence stack instead of falling back to plaintext.
 
 ## 0.10.0 — 2026-11-02
 
-Kudo's language servers now do more than complete and jump: they rename, find references, outline
+Kodra's language servers now do more than complete and jump: they rename, find references, outline
 the file and offer quick fixes.
 
 - **Rename Symbol** — `F2` asks `textDocument/prepareRename` for the range and suggested name, shows
@@ -108,7 +137,7 @@ the file and offer quick fixes.
 
 ## 0.9.0 — 2026-11-01
 
-Kudo can now format the buffer before saving and lint it afterwards.
+Kodra can now format the buffer before saving and lint it afterwards.
 
 - **Format on save** — an opt-in setting that runs Prettier, gofmt, rustfmt or Black on the
   **in-memory buffer** and writes the result, so unsaved edits are formatted too. A formatter error
@@ -134,10 +163,10 @@ Kudo can now format the buffer before saving and lint it afterwards.
 
 ## 0.8.0 — 2026-11-01
 
-Kudo can now discover, run and stop the workspace's build and run tasks.
+Kodra can now discover, run and stop the workspace's build and run tasks.
 
 - **Task explorer** — a new **Tasks** activity collects runnable tasks from three sources and groups
-  them: a declarative `.kudo/tasks.json` manifest, `package.json` scripts (root plus nested manifests
+  them: a declarative `.kodra/tasks.json` manifest, `package.json` scripts (root plus nested manifests
   up to four folders deep, with the package manager chosen from the nearest lockfile and nested
   scripts labelled `sub: build`), and the root `Makefile`'s targets. The pane shows the command line
   next to every row and warns when a required tool (for example `make`) is not on `PATH`.
@@ -150,14 +179,14 @@ Kudo can now discover, run and stop the workspace's build and run tasks.
   command plus resolved working directory in the header, and ends with a `Task finished`,
   `Task failed` or `Task cancelled` chip with the duration. The status bar mirrors the last run.
 - **Commands** — `Task: Show Task Explorer`, `Run Build Task`, `Run Last Task`, `Stop Running Task`
-  and `Refresh Task Explorer`, plus an empty state that can create a starter `.kudo/tasks.json`.
+  and `Refresh Task Explorer`, plus an empty state that can create a starter `.kodra/tasks.json`.
 - **Safety** — `task_run` re-validates the task in Rust: the command must be non-empty and at most
   4000 characters, and its `cwd` must resolve inside the workspace. Runs use the platform shell
   (`cmd /D /C` on Windows, `sh -lc` elsewhere) and the UI keeps the last 4000 output lines.
 
 ## 0.7.0 — 2026-10-31
 
-Kudo can now discover and run the workspace's tests.
+Kodra can now discover and run the workspace's tests.
 
 - **Test explorer** — a new **Tests** activity lists detected test files by framework and package:
   Go (`func TestXxx`), Rust (`#[test]` / `#[tokio::test]`), Python (`test_*.py`, `def test_*`) and
@@ -182,7 +211,7 @@ Kudo can now discover and run the workspace's tests.
 
 ## 0.6.0 — 2026-10-29
 
-Kudo can now debug programs through the Debug Adapter Protocol.
+Kodra can now debug programs through the Debug Adapter Protocol.
 
 - **Debug view** — a new **Run and Debug** activity (`F5`, palette `View: Run and Debug`) with launch
   configurations for Delve (`dlv dap`), CodeLLDB, `lldb-dap` and a custom stdio adapter that takes
@@ -269,7 +298,7 @@ Extensions, themes, worktrees, checkpoints and language servers land in one rele
 - **Extensions** — declarative folders with an `extension.json` manifest contribute colour themes
   and snippets. Install from a folder, enable/disable, and remove from the Extensions pane. Nothing
   in a manifest is executed.
-- **Themes** — six built-in palettes (Kudo Dark/Light, Midnight, Graphite, Sand, Violet) plus
+- **Themes** — six built-in palettes (Kodra Dark/Light, Midnight, Graphite, Sand, Violet) plus
   extension themes, with live preview in Settings. A theme drives the shell tokens, the CodeMirror
   syntax palette and the xterm colours; missing values inherit from the built-in theme of the same
   kind.

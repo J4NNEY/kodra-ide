@@ -1,21 +1,21 @@
 import type { DbColumn, DbConnection, DbResult, DbTable } from '../lib/types'
 import { call, pickDatabaseFile, pickSaveFile } from '../lib/api'
 
-const STORAGE_KEY = 'kudo:db-connections'
+const STORAGE_KEY = 'kodra:db-connections'
 
 export function useDatabase() {
   const ide = useIde()
-  const connections = useState<DbConnection[]>('kudo:db-connections', () => [])
-  const activeId = useState<string | null>('kudo:db-active', () => null)
-  const tables = useState<DbTable[]>('kudo:db-tables', () => [])
-  const schema = useState<DbColumn[]>('kudo:db-schema', () => [])
-  const selectedTable = useState<string>('kudo:db-table', () => '')
-  const result = useState<DbResult | null>('kudo:db-result', () => null)
-  const lastSql = useState<string>('kudo:db-sql', () => '')
-  const history = useState<string[]>('kudo:db-history', () => [])
-  const busy = useState<boolean>('kudo:db-busy', () => false)
-  const consoleOpen = useState<boolean>('kudo:db-console', () => false)
-  const error = useState<string>('kudo:db-error', () => '')
+  const connections = useState<DbConnection[]>('kodra:db-connections', () => [])
+  const activeId = useState<string | null>('kodra:db-active', () => null)
+  const tables = useState<DbTable[]>('kodra:db-tables', () => [])
+  const schema = useState<DbColumn[]>('kodra:db-schema', () => [])
+  const selectedTable = useState<string>('kodra:db-table', () => '')
+  const result = useState<DbResult | null>('kodra:db-result', () => null)
+  const lastSql = useState<string>('kodra:db-sql', () => '')
+  const history = useState<string[]>('kodra:db-history', () => [])
+  const busy = useState<boolean>('kodra:db-busy', () => false)
+  const consoleOpen = useState<boolean>('kodra:db-console', () => false)
+  const error = useState<string>('kodra:db-error', () => '')
 
   const active = computed(
     () => connections.value.find((c) => c.id === activeId.value) ?? null
@@ -34,14 +34,14 @@ export function useDatabase() {
     if (!text) return
     history.value = [text, ...history.value.filter((h) => h !== text)].slice(0, 40)
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('kudo:db-history', JSON.stringify(history.value))
+      localStorage.setItem('kodra:db-history', JSON.stringify(history.value))
     }
   }
 
   function loadHistory() {
     if (typeof localStorage === 'undefined') return
     try {
-      const raw = localStorage.getItem('kudo:db-history')
+      const raw = localStorage.getItem('kodra:db-history')
       if (raw) history.value = JSON.parse(raw)
     } catch {
       history.value = []
@@ -83,7 +83,7 @@ export function useDatabase() {
   }
 
   async function createDatabase() {
-    const path = await pickSaveFile('kudo.sqlite', [
+    const path = await pickSaveFile('kodra.sqlite', [
       { name: 'SQLite database', extensions: ['sqlite', 'db', 'sqlite3'] }
     ])
     if (!path) return null

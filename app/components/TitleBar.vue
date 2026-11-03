@@ -35,7 +35,7 @@ const menus: { label: string; items: MenuItem[] }[] = [
     label: 'Help',
     items: [
       { label: 'Documentation', run: () => window.open('https://tauri.app', '_blank') },
-      { label: 'About Kudo', run: () => (ide.settingsOpen.value = true) }
+      { label: 'About Kodra', run: () => (ide.settingsOpen.value = true) }
     ]
   }
 ]
@@ -64,7 +64,7 @@ onMounted(() => {
   <header class="titlebar" data-tauri-drag-region>
     <div class="brand" data-tauri-drag-region>
       <div class="brand-mark">K</div>
-      <span class="brand-name">Kudo</span>
+      <span class="brand-name">Kodra</span>
     </div>
 
     <div class="tb-menu">

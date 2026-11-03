@@ -18,7 +18,7 @@ export async function listen<T>(event: string, handler: (payload: T) => void): P
 
 // Dev-only bridge so the desktop shell can be exercised from a CDP session.
 if (import.meta.dev && typeof window !== 'undefined') {
-  ;(window as unknown as Record<string, unknown>).__kudoCall = call
+  ;(window as unknown as Record<string, unknown>).__kodraCall = call
 }
 
 export interface AiStreamHandlers {
@@ -110,14 +110,14 @@ export async function cancelChat(requestId: string): Promise<void> {
 }
 
 export async function pickFolder(): Promise<string | null> {
-  if (!isTauri()) return 'C:\\demo\\kudo-workspace'
+  if (!isTauri()) return 'C:\\demo\\kodra-workspace'
   const { open } = await import('@tauri-apps/plugin-dialog')
   const picked = await open({ directory: true, multiple: false, title: 'Open folder' })
   return typeof picked === 'string' ? picked : null
 }
 
 export async function pickExtensionFolder(): Promise<string | null> {
-  if (!isTauri()) return 'C:\\demo\\kudo-extensions\\ember'
+  if (!isTauri()) return 'C:\\demo\\kodra-extensions\\ember'
   const { open } = await import('@tauri-apps/plugin-dialog')
   const picked = await open({
     directory: true,
@@ -129,7 +129,7 @@ export async function pickExtensionFolder(): Promise<string | null> {
 
 /** Pick an existing SQLite database file. */
 export async function pickDatabaseFile(): Promise<string | null> {
-  if (!isTauri()) return 'C:\\demo\\kudo-workspace\\demo.sqlite'
+  if (!isTauri()) return 'C:\\demo\\kodra-workspace\\demo.sqlite'
   const { open } = await import('@tauri-apps/plugin-dialog')
   const picked = await open({
     multiple: false,
@@ -147,7 +147,7 @@ export async function pickSaveFile(
   defaultPath: string,
   filters: { name: string; extensions: string[] }[] = []
 ): Promise<string | null> {
-  if (!isTauri()) return `C:\\demo\\kudo-workspace\\${defaultPath}`
+  if (!isTauri()) return `C:\\demo\\kodra-workspace\\${defaultPath}`
   const { save } = await import('@tauri-apps/plugin-dialog')
   const picked = await save({ defaultPath, filters })
   return typeof picked === 'string' ? picked : null

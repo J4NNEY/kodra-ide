@@ -1,0 +1,59 @@
+Kodra — Proprietary Software License
+
+Copyright (c) 2026 Kodra contributors. All rights reserved.
+
+1. Grant of use
+
+   You are granted a personal, non-exclusive, non-transferable, revocable license to
+   download and use the compiled Kodra application (the "Software") on devices you
+   own or control, for personal or commercial software development.
+
+2. Restrictions
+
+   You may not:
+   a. copy, redistribute, sublicense, sell, rent, lease or otherwise make the
+      Software available to any third party;
+   b. modify, translate, reverse engineer, decompile, disassemble or create
+      derivative works of the Software, except to the extent that applicable law
+      expressly permits despite this limitation;
+   c. remove, alter or obscure any copyright, trademark or other proprietary
+      notice in the Software;
+   d. use the Kodra name or logo to endorse or promote products derived from the
+      Software without prior written permission.
+
+3. Source code
+
+   The source code in this repository is made available for transparency and
+   reference only. No license is granted to use, copy, modify or distribute the
+   source code except as required to build and run the Software for your own use
+   under Section 1, or as expressly permitted in writing by the copyright holder.
+
+4. Third-party components
+
+   The Software includes third-party open-source components. Each component
+   remains governed by its own license, and those licenses prevail over this
+   notice for that component. See THIRD-PARTY-NOTICES.md.
+
+5. No warranty
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. YOU USE THE
+   SOFTWARE AT YOUR OWN RISK, INCLUDING FOR ANY CODE, FILE OR SYSTEM IT TOUCHES.
+
+6. Limitation of liability
+
+   TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER SHALL NOT BE
+   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY OR
+   CONSEQUENTIAL DAMAGES, INCLUDING LOSS OF DATA, PROFITS OR BUSINESS
+   INTERRUPTION, ARISING FROM THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN
+   IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+7. Termination
+
+   This license terminates automatically if you breach any of its terms. On
+   termination you must stop using the Software and delete all copies.
+
+8. Contact
+
+   For licensing requests, open an issue on the Kodra repository.

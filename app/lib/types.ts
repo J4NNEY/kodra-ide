@@ -323,5 +323,13 @@ export interface UpdateCheck {
   notes: string
   publishedAt: string
   url: string | null
+  sha256: string | null
   feed: string
+}
+
+export interface UpdateDownload {
+  path: string
+  bytes: number
+  fileName: string
+  verified: boolean
 }

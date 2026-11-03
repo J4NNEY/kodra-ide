@@ -19,7 +19,7 @@ import type { SidebarView } from '../lib/types'
 
 const ide = useIde()
 const browser = useBrowser()
-const gitCount = useState<number>('kudo:git-count', () => 0)
+const gitCount = useState<number>('kodra:git-count', () => 0)
 
 const items: { id: SidebarView; icon: any; label: string; badge?: boolean }[] = [
   { id: 'explorer', icon: Files, label: 'Explorer' },

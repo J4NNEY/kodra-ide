@@ -413,11 +413,11 @@ function labelIn(value: unknown, parent: string, from: number) {
 
 export function useLsp() {
   const ide = useIde()
-  const detected = useState<Record<string, string>>('kudo:lsp-detected', () => ({}))
-  const disabled = useState<string[]>('kudo:lsp-disabled', () => [])
-  const sessions = useState<Record<string, SessionState>>('kudo:lsp-sessions', () => ({}))
-  const diagnostics = useState<Record<string, LspDiagnostic[]>>('kudo:lsp-diagnostics', () => ({}))
-  const ready = useState<boolean>('kudo:lsp-listening', () => false)
+  const detected = useState<Record<string, string>>('kodra:lsp-detected', () => ({}))
+  const disabled = useState<string[]>('kodra:lsp-disabled', () => [])
+  const sessions = useState<Record<string, SessionState>>('kodra:lsp-sessions', () => ({}))
+  const diagnostics = useState<Record<string, LspDiagnostic[]>>('kodra:lsp-diagnostics', () => ({}))
+  const ready = useState<boolean>('kodra:lsp-listening', () => false)
 
   const specs = computed(() =>
     CATALOG.map((spec) => ({

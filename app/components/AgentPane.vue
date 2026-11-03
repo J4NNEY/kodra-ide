@@ -16,7 +16,7 @@ import {
 const ide = useIde()
 const chat = useChat()
 const checkpoints = useCheckpoints()
-const settingsTab = useState<string>('kudo:settings-tab', () => 'appearance')
+const settingsTab = useState<string>('kodra:settings-tab', () => 'appearance')
 
 const recent = computed(() => chat.messages.value.slice(-4).reverse())
 
@@ -62,7 +62,7 @@ const prompts = [
 function ask(prompt: string) {
   ide.chatOpen.value = true
   chat.send(prompt)
-  window.dispatchEvent(new CustomEvent('kudo:focus-composer'))
+  window.dispatchEvent(new CustomEvent('kodra:focus-composer'))
 }
 
 function openSettings() {

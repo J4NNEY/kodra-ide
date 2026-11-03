@@ -81,7 +81,7 @@ onMounted(load)
         <Sparkles :size="24" :stroke-width="1.4" style="opacity: 0.4" />
         <p>No skills found.</p>
         <span class="hint" style="text-align: center">
-          Skills live in <code>.kudo/skills/&lt;name&gt;/SKILL.md</code> and in the user
+          Skills live in <code>.kodra/skills/&lt;name&gt;/SKILL.md</code> and in the user
           config directory. Create one to teach the agent a repeatable workflow.
         </span>
         <button class="btn primary sm" @click="showNew = true">
@@ -147,7 +147,7 @@ onMounted(load)
                 @keydown.enter="createSkill"
               />
               <span class="hint">
-                Creates <code>.kudo/skills/&lt;slug&gt;/SKILL.md</code> in the workspace.
+                Creates <code>.kodra/skills/&lt;slug&gt;/SKILL.md</code> in the workspace.
               </span>
             </div>
           </div>

@@ -221,7 +221,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
         <button
           class="icon-btn"
           :disabled="!canPreview"
-          :title="canPreview ? 'Set as home' : hasUrl ? 'Kudo cannot use its own address as home' : 'Open a page first'"
+          :title="canPreview ? 'Set as home' : hasUrl ? 'Kodra cannot use its own address as home' : 'Open a page first'"
           @click="ide.settings.value.browserHome = browser.url.value; ide.notify('Browser home updated', 'success')"
         >
           <Settings2 :size="13" />
@@ -246,7 +246,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
             <h2>Preview a running app</h2>
             <p>
               Type a URL in the address bar to show a dev server, docs page or local build
-              inside Kudo.
+              inside Kodra.
             </p>
             <div class="empty-actions">
               <button class="btn primary sm" @click="focusAddress">Enter URL</button>
@@ -259,7 +259,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
               </button>
             </div>
             <p class="empty-hint">
-              Kudo never loads its own address here — that would nest the whole IDE inside the
+              Kodra never loads its own address here — that would nest the whole IDE inside the
               pane.
             </p>
           </div>
@@ -268,10 +268,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
         <div v-else-if="browser.isSelfUrl.value" class="preview-empty">
           <div class="empty-card warn">
             <span class="empty-badge"><Globe :size="22" /></span>
-            <h2>This address is Kudo itself</h2>
+            <h2>This address is Kodra itself</h2>
             <p>
               <code>{{ browser.url.value }}</code> is the origin this IDE is served from. Loading
-              it would embed Kudo inside Kudo, so the pane stays empty.
+              it would embed Kodra inside Kodra, so the pane stays empty.
             </p>
             <div class="empty-actions">
               <button class="btn primary sm" @click="openExternal()">

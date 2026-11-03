@@ -1,21 +1,21 @@
-const LAST_URL_KEY = 'kudo:browser-last-url'
+const LAST_URL_KEY = 'kodra:browser-last-url'
 
 export function useBrowser() {
   const ide = useIde()
-  const open = useState<boolean>('kudo:browser-open', () => false)
-  const url = useState<string>('kudo:browser-url', () => {
+  const open = useState<boolean>('kodra:browser-open', () => false)
+  const url = useState<string>('kodra:browser-url', () => {
     if (!import.meta.client) return ''
     // Restore what the user was previewing last time, but never fall back to a
     // guessed port: an empty URL shows the start panel instead.
     return localStorage.getItem(LAST_URL_KEY) ?? ''
   })
-  const history = useState<string[]>('kudo:browser-history', () => [])
-  const index = useState<number>('kudo:browser-index', () => -1)
-  const reloadKey = useState<number>('kudo:browser-reload', () => 0)
-  const loading = useState<boolean>('kudo:browser-loading', () => false)
+  const history = useState<string[]>('kodra:browser-history', () => [])
+  const index = useState<number>('kodra:browser-index', () => -1)
+  const reloadKey = useState<number>('kodra:browser-reload', () => 0)
+  const loading = useState<boolean>('kodra:browser-loading', () => false)
 
   /**
-   * The origin Kudo itself is served from. In `pnpm desktop` this is the Nuxt
+   * The origin Kodra itself is served from. In `pnpm desktop` this is the Nuxt
    * dev server on :3000, so previewing it would embed the IDE inside the IDE.
    */
   const selfOrigin = typeof window === 'undefined' ? '' : window.location.origin
@@ -97,7 +97,7 @@ export function useBrowser() {
     if (target) navigate(target)
     else if (!url.value && !history.value.length) {
       // Only open the configured home automatically when it is set. The
-      // preview panel guards against Kudo's own origin.
+      // preview panel guards against Kodra's own origin.
       const configured = ide.settings.value.browserHome?.trim()
       if (configured) navigate(configured)
     }

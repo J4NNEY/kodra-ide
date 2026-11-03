@@ -17,7 +17,7 @@ const props = defineProps<{ path: string; depth: number; root?: boolean }>()
 
 const ide = useIde()
 const git = useGit()
-const treeVersion = useState<number>('kudo:tree-version', () => 0)
+const treeVersion = useState<number>('kodra:tree-version', () => 0)
 const entries = ref<Entry[]>([])
 const open = ref<Record<string, boolean>>({})
 const loading = ref(false)

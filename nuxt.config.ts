@@ -1,4 +1,4 @@
-// Nuxt configuration for Kudo (desktop SPA bundled into Tauri).
+// Nuxt configuration for Kodra (desktop SPA bundled into Tauri).
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   srcDir: 'app',
@@ -8,7 +8,7 @@ export default defineNuxtConfig({
   app: {
     baseURL: '/',
     head: {
-      title: 'Kudo',
+      title: 'Kodra',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -32,7 +32,7 @@ export default defineNuxtConfig({
     }
   },
   typescript: { strict: true },
-  // Kudo is a single-page static app: it has no route rules and never calls
+  // Kodra is a single-page static app: it has no route rules and never calls
   // useAppManifest, so the app-manifest experiment only adds an SSR-only
   // `#app-manifest` import that Vite's client pre-transform cannot resolve on a
   // cold dev start. Turning it off keeps the dev log clean.

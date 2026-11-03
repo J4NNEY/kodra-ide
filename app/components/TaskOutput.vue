@@ -25,7 +25,7 @@ function stop() {
 
 async function runDefault() {
   const started = await tasks.runDefault()
-  if (!started) ide.notify('No default build task. Mark one in .kudo/tasks.json.', 'info')
+  if (!started) ide.notify('No default build task. Mark one in .kodra/tasks.json.', 'info')
 }
 
 async function runLast() {

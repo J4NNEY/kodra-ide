@@ -9,7 +9,7 @@ export function useLayoutSize(key: string, fallback: number, min: number, max: n
   const size = useState<number>(key, () => fallback)
 
   if (import.meta.client) {
-    const stored = Number(localStorage.getItem(`kudo:${key}`))
+    const stored = Number(localStorage.getItem(`kodra:${key}`))
     if (Number.isFinite(stored) && stored >= min && stored <= max && size.value === fallback) {
       size.value = stored
     }
@@ -17,7 +17,7 @@ export function useLayoutSize(key: string, fallback: number, min: number, max: n
 
   watch(size, (value) => {
     if (!import.meta.client) return
-    localStorage.setItem(`kudo:${key}`, String(Math.round(value)))
+    localStorage.setItem(`kodra:${key}`, String(Math.round(value)))
   })
 
   return size

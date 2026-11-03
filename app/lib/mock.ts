@@ -16,16 +16,16 @@ import type {
  * In-browser fallback so the whole UI can be developed and demoed with `pnpm dev`
  * without building the Tauri shell. It implements a tiny virtual workspace.
  */
-export const MOCK_ROOT = 'C:\\demo\\kudo-workspace'
+export const MOCK_ROOT = 'C:\\demo\\kodra-workspace'
 
 type Node = { dir: boolean; text?: string }
 
 const seed: Record<string, Node> = {
   'README.md': {
     dir: false,
-    text: `# Kudo
+    text: `# Kodra
 
-A clean-room desktop IDE inspired by Sokudo, built with **Tauri v2 + Nuxt 3**.
+A fast desktop IDE for code, terminals, databases and AI agents, built with **Tauri v2 + Nuxt 3**.
 
 ## Features
 
@@ -187,7 +187,7 @@ function mockPattern(query: string, caseSensitive: boolean, wholeWord: boolean, 
 }
 
 export const mockWorkspace: WorkspaceInfo = {
-  name: 'kudo-workspace',
+  name: 'kodra-workspace',
   path: MOCK_ROOT,
   isGit: true,
   branch: 'main'
@@ -267,12 +267,12 @@ const defaultSettings: Settings = {
     apiKey: '',
     temperature: 0.3,
     maxTokens: 4096,
-    systemPrompt: "You are Kudo's coding agent.",
+    systemPrompt: "You are Kodra's coding agent.",
     agentMode: true,
     autoApprove: false
   },
   recentWorkspaces: [
-    { name: 'kudo-workspace', path: MOCK_ROOT, lastOpened: Date.now() / 1000 }
+    { name: 'kodra-workspace', path: MOCK_ROOT, lastOpened: Date.now() / 1000 }
   ],
   mcpServers: [],
   updateFeed: '',
@@ -281,7 +281,7 @@ const defaultSettings: Settings = {
 
 function loadSettings(): Settings {
   try {
-    const raw = localStorage.getItem('kudo:settings')
+    const raw = localStorage.getItem('kodra:settings')
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Settings>
       const settings: Settings = {
@@ -289,7 +289,7 @@ function loadSettings(): Settings {
         ...parsed,
         ai: { ...defaultSettings.ai, ...(parsed.ai ?? {}) }
       }
-      // Legacy default from <= 0.12.0 embedded Kudo's own dev server.
+      // Legacy default from <= 0.12.0 embedded Kodra's own dev server.
       if (settings.browserHome.trim() === 'http://localhost:3000') settings.browserHome = ''
       return settings
     }
@@ -307,10 +307,10 @@ const mockDb: Record<string, MockTable> = {
   users: {
     columns: ['id', 'email', 'name', 'plan', 'created_at'],
     rows: [
-      [1, 'ada@kudo.dev', 'Ada Lovelace', 'pro', '2026-01-04 09:12:00'],
-      [2, 'grace@kudo.dev', 'Grace Hopper', 'team', '2026-01-18 14:41:00'],
-      [3, 'linus@kudo.dev', 'Linus Torvalds', 'free', '2026-02-02 08:05:00'],
-      [4, 'margaret@kudo.dev', 'Margaret Hamilton', 'pro', '2026-02-21 19:33:00']
+      [1, 'ada@kodra.dev', 'Ada Lovelace', 'pro', '2026-01-04 09:12:00'],
+      [2, 'grace@kodra.dev', 'Grace Hopper', 'team', '2026-01-18 14:41:00'],
+      [3, 'linus@kodra.dev', 'Linus Torvalds', 'free', '2026-02-02 08:05:00'],
+      [4, 'margaret@kodra.dev', 'Margaret Hamilton', 'pro', '2026-02-21 19:33:00']
     ]
   },
   sessions: {
@@ -324,7 +324,7 @@ const mockDb: Record<string, MockTable> = {
   events: {
     columns: ['id', 'type', 'payload', 'created_at'],
     rows: [
-      [1, 'workspace_open', '{"path":"C:\\\\demo\\\\kudo-workspace"}', '2026-10-27 08:00:01'],
+      [1, 'workspace_open', '{"path":"C:\\\\demo\\\\kodra-workspace"}', '2026-10-27 08:00:01'],
       [2, 'agent_turn', '{"tokens":812,"tools":2}', '2026-10-27 08:02:11'],
       [3, 'file_save', '{"path":"src/main.ts"}', '2026-10-27 08:03:44'],
       [4, 'terminal_spawn', '{"shell":"powershell.exe"}', '2026-10-27 08:04:09']
@@ -388,19 +388,19 @@ const mockSkills = [
   {
     name: 'release-checklist',
     description: 'Verify the desktop build before tagging a release.',
-    path: `${MOCK_ROOT}\\.kudo\\skills\\release-checklist\\SKILL.md`,
+    path: `${MOCK_ROOT}\\.kodra\\skills\\release-checklist\\SKILL.md`,
     source: 'workspace'
   },
   {
     name: 'review-pr',
     description: 'Review a pull request for correctness, tests and regressions.',
-    path: `${MOCK_ROOT}\\.kudo\\skills\\review-pr\\SKILL.md`,
+    path: `${MOCK_ROOT}\\.kodra\\skills\\review-pr\\SKILL.md`,
     source: 'workspace'
   },
   {
     name: 'sql-migration',
     description: 'Write and apply a safe SQLite migration with a rollback path.',
-    path: 'C:\\Users\\you\\AppData\\Roaming\\kudo\\skills\\sql-migration\\SKILL.md',
+    path: 'C:\\Users\\you\\AppData\\Roaming\\kodra\\skills\\sql-migration\\SKILL.md',
     source: 'user'
   }
 ]
@@ -444,7 +444,7 @@ const mockNet: {
 const mockContainers = [
   {
     ID: 'c1a2b3c4d5e6',
-    Names: 'kudo-postgres',
+    Names: 'kodra-postgres',
     Image: 'postgres:16-alpine',
     State: 'running',
     Status: 'Up 3 hours',
@@ -452,7 +452,7 @@ const mockContainers = [
   },
   {
     ID: 'f6e5d4c3b2a1',
-    Names: 'kudo-redis',
+    Names: 'kodra-redis',
     Image: 'redis:7-alpine',
     State: 'running',
     Status: 'Up 3 hours',
@@ -460,8 +460,8 @@ const mockContainers = [
   },
   {
     ID: '9a8b7c6d5e4f',
-    Names: 'kudo-worker',
-    Image: 'kudo/worker:dev',
+    Names: 'kodra-worker',
+    Image: 'kodra/worker:dev',
     State: 'exited',
     Status: 'Exited (1) 22 minutes ago',
     Ports: ''
@@ -471,7 +471,7 @@ const mockContainers = [
 const mockImages = [
   { Repository: 'postgres', Tag: '16-alpine', ID: 'a1b2c3d4', Size: '243MB' },
   { Repository: 'redis', Tag: '7-alpine', ID: 'e5f6a7b8', Size: '41MB' },
-  { Repository: 'kudo/worker', Tag: 'dev', ID: 'c9d8e7f6', Size: '512MB' }
+  { Repository: 'kodra/worker', Tag: 'dev', ID: 'c9d8e7f6', Size: '512MB' }
 ]
 
 
@@ -623,15 +623,15 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'get_settings':
       return ok(loadSettings())
     case 'save_settings':
-      localStorage.setItem('kudo:settings', JSON.stringify(args.settings))
+      localStorage.setItem('kodra:settings', JSON.stringify(args.settings))
       return ok(args.settings)
     case 'reset_settings':
-      localStorage.removeItem('kudo:settings')
+      localStorage.removeItem('kodra:settings')
       return ok(defaultSettings)
     case 'app_info':
       return ok({
-        name: 'Kudo',
-        version: '0.7.0',
+        name: 'Kodra',
+        version: '1.0.0-mock',
         platform: 'browser-mock',
         arch: 'wasm',
         configDir: 'localStorage'
@@ -663,7 +663,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'tests_detect':
       return ok([
         {
-          path: 'C:\\demo\\kudo-workspace\\lib\\strutil_test.go',
+          path: 'C:\\demo\\kodra-workspace\\lib\\strutil_test.go',
           rel: 'lib/strutil_test.go',
           framework: 'go',
           package: 'lib',
@@ -673,7 +673,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
           ]
         },
         {
-          path: 'C:\\demo\\kudo-workspace\\app\\test_models.py',
+          path: 'C:\\demo\\kodra-workspace\\app\\test_models.py',
           rel: 'app/test_models.py',
           framework: 'python',
           package: 'app',
@@ -686,7 +686,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'tests_toolchain':
       return ok({ go: 'C:\\Program Files\\Go\\bin\\go.exe', python: 'C:\\Python313\\python.exe' })
     case 'test_run':
-      return ok({ id: 'mock-run', label: 'go test -v -count=1 ./...', cwd: 'C:\\demo\\kudo-workspace' })
+      return ok({ id: 'mock-run', label: 'go test -v -count=1 ./...', cwd: 'C:\\demo\\kodra-workspace' })
     case 'test_cancel':
       return ok(true)
     case 'test_cancel_all':
@@ -694,9 +694,9 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'tasks_detect':
       return ok([
         {
-          id: 'kudo:0',
+          id: 'kodra:0',
           label: 'Build',
-          source: 'kudo',
+          source: 'kodra',
           detail: 'pnpm build',
           command: 'pnpm build',
           cwd: '',
@@ -727,7 +727,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'tasks_toolchain':
       return ok({ npm: 'C:\\Program Files\\nodejs\\npm.cmd', node: 'C:\\Program Files\\nodejs\\node.exe' })
     case 'task_run':
-      return ok({ id: 'mock-task-run', label: 'pnpm build', cwd: 'C:\\demo\\kudo-workspace' })
+      return ok({ id: 'mock-task-run', label: 'pnpm build', cwd: 'C:\\demo\\kodra-workspace' })
     case 'task_cancel':
       return ok(true)
     case 'task_cancel_all':
@@ -739,7 +739,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
           label: 'Prettier',
           kind: 'formatter',
           languages: ['javascript', 'typescript', 'json', 'css', 'html', 'markdown', 'yaml', 'vue'],
-          path: 'C:\\demo\\kudo-workspace\\node_modules\\prettier\\bin\\prettier.cjs',
+          path: 'C:\\demo\\kodra-workspace\\node_modules\\prettier\\bin\\prettier.cjs',
           scope: 'workspace',
           install: 'npm install -D prettier'
         },
@@ -775,7 +775,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
           label: 'ESLint',
           kind: 'linter',
           languages: ['javascript', 'typescript', 'vue'],
-          path: 'C:\\demo\\kudo-workspace\\node_modules\\eslint\\bin\\eslint.js',
+          path: 'C:\\demo\\kodra-workspace\\node_modules\\eslint\\bin\\eslint.js',
           scope: 'workspace',
           install: 'npm install -D eslint'
         },
@@ -853,7 +853,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
     case 'db_engine_info':
       return ok({ version: '3.46.0 (mock)', available: true })
     case 'db_connect': {
-      const path = String(args.path ?? 'C:\\demo\\kudo-workspace\\demo.sqlite')
+      const path = String(args.path ?? 'C:\\demo\\kodra-workspace\\demo.sqlite')
       const name = path.split(/[\\/]/).pop() ?? 'demo.sqlite'
       return ok({ id: 'mock-db', path, name, tables: Object.keys(mockDb).length })
     }
@@ -890,7 +890,7 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
       )
     case 'skill_save':
     case 'skill_scaffold':
-      return ok(`${MOCK_ROOT}\\.kudo\\skills\\new-skill\\SKILL.md`)
+      return ok(`${MOCK_ROOT}\\.kodra\\skills\\new-skill\\SKILL.md`)
     case 'docker_info':
       return ok({ available: true, version: '27.3.1 (mock)', error: null })
     case 'docker_containers':
@@ -1031,17 +1031,17 @@ export async function mockCall<T>(cmd: string, args: Record<string, any> = {}): 
         currentVersion: '0.7.0',
         latestVersion: '0.7.0',
         available: true,
-        notes: '## Kudo 0.7.0\n\n- Test explorer for Go, Rust, Python and Node projects\n- Run a file or a single test, stream output, cancel a run\n- Per-test status in the sidebar and the editor gutter\n',
+        notes: '## Kodra 0.7.0\n\n- Test explorer for Go, Rust, Python and Node projects\n- Run a file or a single test, stream output, cancel a run\n- Per-test status in the sidebar and the editor gutter\n',
         publishedAt: '2026-10-30T00:00:00Z',
-        url: 'https://example.com/kudo_0.7.0_x64-setup.exe',
+        url: 'https://example.com/kodra_0.7.0_x64-setup.exe',
         feed: String(args.feedUrl)
       })
     }
     case 'update_download':
       return ok({
-        path: 'C:\\Users\\you\\AppData\\Local\\Temp\\kudo-updates\\kudo-setup.exe',
+        path: 'C:\\Users\\you\\AppData\\Local\\Temp\\kodra-updates\\kodra-setup.exe',
         bytes: 84_000_000,
-        fileName: 'kudo-setup.exe'
+        fileName: 'kodra-setup.exe'
       })
     case 'update_install':
     case 'update_reveal':

@@ -152,7 +152,7 @@ function refresh() {
       </div>
       <div v-else-if="!tests.hasTests.value" class="tests-empty">
         <p>No tests found.</p>
-        <p class="tests-hint">Kudo looks for Go, Rust, Python and Node test files.</p>
+        <p class="tests-hint">Kodra looks for Go, Rust, Python and Node test files.</p>
         <button class="btn" @click="refresh">Scan again</button>
       </div>
 

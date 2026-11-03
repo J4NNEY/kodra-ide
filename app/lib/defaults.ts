@@ -2,7 +2,7 @@ import type { Settings } from './types'
 
 /** Fresh-install settings. Shared by `useIde` and preview-only composables. */
 export const defaultSettings: Settings = {
-  theme: 'kudo-dark',
+  theme: 'kodra-dark',
   accent: '#d4a73c',
   fontFamily: 'JetBrains Mono, Cascadia Code, Consolas, monospace',
   fontSize: 13,
@@ -24,7 +24,7 @@ export const defaultSettings: Settings = {
     temperature: 0.3,
     maxTokens: 4096,
     systemPrompt:
-      "You are Kudo's coding agent. Use the provided tools to inspect and edit files in the open workspace.",
+      "You are Kodra's coding agent. Use the provided tools to inspect and edit files in the open workspace.",
     agentMode: true,
     autoApprove: false
   },

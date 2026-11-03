@@ -13,14 +13,14 @@ const LETTER: Record<string, string> = {
 }
 
 export function useGit() {
-  const status = useState<GitStatus | null>('kudo:git-status', () => null)
-  const branches = useState<Branch[]>('kudo:git-branches', () => [])
-  const log = useState<Commit[]>('kudo:git-log', () => [])
-  const worktrees = useState<Worktree[]>('kudo:git-worktrees', () => [])
-  const loading = useState<boolean>('kudo:git-loading', () => false)
-  const error = useState<string>('kudo:git-error', () => '')
+  const status = useState<GitStatus | null>('kodra:git-status', () => null)
+  const branches = useState<Branch[]>('kodra:git-branches', () => [])
+  const log = useState<Commit[]>('kodra:git-log', () => [])
+  const worktrees = useState<Worktree[]>('kodra:git-worktrees', () => [])
+  const loading = useState<boolean>('kodra:git-loading', () => false)
+  const error = useState<string>('kodra:git-error', () => '')
   const ide = useIde()
-  const gitCount = useState<number>('kudo:git-count', () => 0)
+  const gitCount = useState<number>('kodra:git-count', () => 0)
 
   const marks = computed(() => {
     const map = new Map<string, { letter: string; kind: string }>()

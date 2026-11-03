@@ -447,7 +447,7 @@ pub fn git_worktree_remove(
     git(&root, &refs)
 }
 
-/// Remove metadata for worktrees whose folder was deleted outside Kudo.
+/// Remove metadata for worktrees whose folder was deleted outside Kodra.
 #[tauri::command]
 pub fn git_worktree_prune(state: State<'_, AppState>) -> Result<String, String> {
     let root = state.workspace_root()?;

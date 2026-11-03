@@ -11,7 +11,7 @@ export function useKeybindings() {
   const tests = useTests()
   const tasks = useTasks()
   const intel = useCodeIntel()
-  const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
+  const cursor = useState('kodra:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   let chord: string | null = null
   let chordTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -192,7 +192,7 @@ export function useKeybindings() {
       ide.panelTab.value = 'tasks'
       ide.panelVisible.value = true
       void tasks.runDefault().then((started) => {
-        if (!started) ide.notify('No default build task. Mark one in .kudo/tasks.json.', 'info')
+        if (!started) ide.notify('No default build task. Mark one in .kodra/tasks.json.', 'info')
       })
       return
     }

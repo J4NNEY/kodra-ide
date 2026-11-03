@@ -13,7 +13,7 @@ export interface McpSessionState {
 
 export function useMcp() {
   const ide = useIde()
-  const sessions = useState<Record<string, McpSessionState>>('kudo:mcp-sessions', () => ({}))
+  const sessions = useState<Record<string, McpSessionState>>('kodra:mcp-sessions', () => ({}))
 
   function configFor(name: string) {
     return (ide.settings.value.mcpServers ?? []).find((s) => s.name === name)

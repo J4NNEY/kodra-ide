@@ -86,7 +86,15 @@ fn scan_root(root: &Path, source: &str, out: &mut Vec<Skill>) {
 fn roots(state: &AppState) -> Vec<(PathBuf, String)> {
     let mut out = Vec::new();
     if let Ok(root) = state.workspace_root() {
-        out.push((root.join(".kudo").join("skills"), "workspace".into()));
+        // Projects that predate the rename keep their `.kudo` folder working.
+        let skills = root.join(".kodra").join("skills");
+        let legacy = root.join(".kudo").join("skills");
+        let workspace_skills = if skills.exists() || !legacy.exists() {
+            skills
+        } else {
+            legacy
+        };
+        out.push((workspace_skills, "workspace".into()));
         out.push((root.join(".claude").join("skills"), "workspace".into()));
     }
     let config = state.config_dir.read().clone();
@@ -94,7 +102,7 @@ fn roots(state: &AppState) -> Vec<(PathBuf, String)> {
     out
 }
 
-/// List skills discovered in `<workspace>/.kudo/skills`,
+/// List skills discovered in `<workspace>/.kodra/skills`,
 /// `<workspace>/.claude/skills` and the user config directory.
 #[tauri::command]
 pub async fn skills_list(state: State<'_, AppState>) -> Result<Vec<Skill>, String> {
@@ -148,7 +156,7 @@ pub async fn skill_scaffold(name: String, state: State<'_, AppState>) -> Result<
     if slug.is_empty() {
         return Err("skill name is required".into());
     }
-    let dir = root.join(".kudo").join("skills").join(&slug);
+    let dir = root.join(".kodra").join("skills").join(&slug);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let manifest = dir.join("SKILL.md");
     if !manifest.exists() {

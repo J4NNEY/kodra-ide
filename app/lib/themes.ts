@@ -158,15 +158,15 @@ const SYNTAX_LIGHT: SyntaxPalette = {
 
 export const builtinThemes: Theme[] = [
   {
-    id: 'kudo-dark',
-    name: 'Kudo Dark',
+    id: 'kodra-dark',
+    name: 'Kodra Dark',
     kind: 'dark',
     colors: SURFACE_DARK,
     syntax: SYNTAX_DARK
   },
   {
-    id: 'kudo-light',
-    name: 'Kudo Light',
+    id: 'kodra-light',
+    name: 'Kodra Light',
     kind: 'light',
     colors: SURFACE_LIGHT,
     syntax: SYNTAX_LIGHT
@@ -327,10 +327,10 @@ export const builtinThemes: Theme[] = [
   }
 ]
 
-const DEFAULT_THEME_ID = 'kudo-dark'
+const DEFAULT_THEME_ID = 'kodra-dark'
 
 /** Nuxt state key holding themes contributed by enabled extensions. */
-export const EXTENSION_THEMES_KEY = 'kudo:extension-themes'
+export const EXTENSION_THEMES_KEY = 'kodra:extension-themes'
 
 const COLOR_RE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i
 const ID_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/i
@@ -347,8 +347,11 @@ export function baseThemeFor(kind: ThemeKind): Theme {
 export function themeIdFor(id: string | undefined): string {
   if (!id) return DEFAULT_THEME_ID
   const value = id.trim()
-  if (value === 'dark') return 'kudo-dark'
-  if (value === 'light') return 'kudo-light'
+  if (value === 'dark') return 'kodra-dark'
+  if (value === 'light') return 'kodra-light'
+  // Theme ids that shipped before the rename.
+  if (value === 'kudo-dark') return 'kodra-dark'
+  if (value === 'kudo-light') return 'kodra-light'
   return value || DEFAULT_THEME_ID
 }
 
@@ -484,7 +487,7 @@ export function resolveTheme(
   prefersLight = false
 ): Theme {
   if (id === 'system' || id === 'auto') {
-    return themes.find((t) => t.id === (prefersLight ? 'kudo-light' : 'kudo-dark')) ?? builtinThemes[0]!
+    return themes.find((t) => t.id === (prefersLight ? 'kodra-light' : 'kodra-dark')) ?? builtinThemes[0]!
   }
   const wanted = themeIdFor(id)
   return themes.find((t) => t.id === wanted) ?? builtinThemes[0]!

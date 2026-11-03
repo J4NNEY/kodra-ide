@@ -11,7 +11,7 @@ function cloneSettings<T>(value: T): T {
 }
 
 export function useTerminalEpoch() {
-  return useState<number>('kudo:terminal-epoch', () => 0)
+  return useState<number>('kodra:terminal-epoch', () => 0)
 }
 
 export function useCommands() {
@@ -26,7 +26,7 @@ export function useCommands() {
   const format = useFormat()
   const intel = useCodeIntel()
   const lsp = useLsp()
-  const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
+  const cursor = useState('kodra:cursor', () => ({ line: 1, column: 1, selected: 0 }))
   const extensions = useExtensions()
   const themes = useThemes()
 
@@ -151,7 +151,7 @@ export function useCommands() {
       group: 'Browser',
       run: () => {
         const target = window.prompt(
-          'URL to preview (Kudo never loads its own address)',
+          'URL to preview (Kodra never loads its own address)',
           browser.url.value || 'http://localhost:5173'
         )
         if (target?.trim()) browser.show(target)
@@ -228,7 +228,7 @@ export function useCommands() {
       run: () => {
         const next = cloneSettings(ide.settings.value)
         const light = themes.active.value.kind === 'light'
-        const target = themes.byId(light ? 'kudo-dark' : 'kudo-light')
+        const target = themes.byId(light ? 'kodra-dark' : 'kodra-light')
         next.theme = target.id
         next.accent = target.colors.accent
         ide.saveSettings(next)
@@ -363,7 +363,7 @@ export function useCommands() {
         ide.panelTab.value = 'tasks'
         ide.panelVisible.value = true
         const started = await tasks.runDefault()
-        if (!started) ide.notify('No default build task. Mark one in .kudo/tasks.json.', 'info')
+        if (!started) ide.notify('No default build task. Mark one in .kodra/tasks.json.', 'info')
       }
     },
     {
@@ -525,7 +525,7 @@ export function useCommands() {
       label: 'Terminal: Clear Buffer',
       group: 'Terminal',
       run: () => {
-        window.dispatchEvent(new CustomEvent('kudo:terminal-clear'))
+        window.dispatchEvent(new CustomEvent('kodra:terminal-clear'))
       }
     },
     {
@@ -533,7 +533,7 @@ export function useCommands() {
       label: 'Terminal: Close Active Session',
       group: 'Terminal',
       run: () => {
-        window.dispatchEvent(new CustomEvent('kudo:terminal-close'))
+        window.dispatchEvent(new CustomEvent('kodra:terminal-close'))
       }
     },
     {
@@ -551,7 +551,7 @@ export function useCommands() {
       group: 'Agent',
       run: () => {
         ide.chatOpen.value = true
-        window.dispatchEvent(new CustomEvent('kudo:focus-composer'))
+        window.dispatchEvent(new CustomEvent('kodra:focus-composer'))
       }
     },
     {
@@ -573,7 +573,7 @@ export function useCommands() {
     },
     {
       id: 'help.about',
-      label: 'About Kudo',
+      label: 'About Kodra',
       group: 'Help',
       run: () => (ide.settingsOpen.value = true)
     },
@@ -582,7 +582,7 @@ export function useCommands() {
       label: 'Check for Updates…',
       group: 'Help',
       run: () => {
-        useState<string>('kudo:settings-tab').value = 'about'
+        useState<string>('kodra:settings-tab').value = 'about'
         ide.settingsOpen.value = true
       }
     }

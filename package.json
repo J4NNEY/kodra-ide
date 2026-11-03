@@ -1,9 +1,17 @@
 {
-  "name": "kudo",
+  "name": "kodra",
   "private": true,
-  "version": "0.12.1",
+  "version": "1.0.0",
   "type": "module",
-  "description": "Kudo — a clean-room desktop IDE (Sokudo-inspired) built with Tauri v2 + Nuxt 3",
+  "description": "Kodra - a fast, focused desktop IDE for code, terminals, databases and AI agents",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/J4NNEY/kodra-ide.git"
+  },
+  "homepage": "https://github.com/J4NNEY/kodra-ide",
+  "bugs": {
+    "url": "https://github.com/J4NNEY/kodra-ide/issues"
+  },
   "scripts": {
     "dev": "nuxt dev --port 3000",
     "build": "nuxt generate",
@@ -11,7 +19,10 @@
     "tauri": "tauri",
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
-    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "icons": "powershell -ExecutionPolicy Bypass -File scripts/make-icons.ps1",
+    "release:win": "powershell -ExecutionPolicy Bypass -File scripts/release.ps1"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.6",
@@ -43,5 +54,6 @@
     "@tauri-apps/cli": "^2.5.0",
     "typescript": "^5.8.3",
     "vue-tsc": "^3.3.13"
-  }
+  },
+  "license": "UNLICENSED"
 }

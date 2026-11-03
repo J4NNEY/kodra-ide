@@ -16,7 +16,7 @@ import {
   SquareTerminal,
   X
 } from 'lucide-vue-next'
-import type { Settings, TerminalShellInfo, UpdateCheck } from '../lib/types'
+import type { Settings, TerminalShellInfo, UpdateCheck, UpdateDownload } from '../lib/types'
 import type { Theme } from '../lib/themes'
 import { call } from '../lib/api'
 
@@ -25,7 +25,7 @@ const lsp = useLsp()
 const format = useFormat()
 const themes = useThemes()
 const extensions = useExtensions()
-const settingsTab = useState<string>('kudo:settings-tab', () => 'appearance')
+const settingsTab = useState<string>('kodra:settings-tab', () => 'appearance')
 
 interface AppInfo {
   name: string
@@ -45,7 +45,7 @@ const checking = ref(false)
 const updateInfo = ref<UpdateCheck | null>(null)
 const updateError = ref('')
 const downloading = ref(false)
-const downloaded = ref<{ path: string; bytes: number; fileName: string } | null>(null)
+const downloaded = ref<UpdateDownload | null>(null)
 
 const accents = ['#d4a73c', '#6cb6ff', '#73c991', '#c792ea', '#e4676b', '#e2a03f']
 
@@ -182,9 +182,9 @@ async function checkUpdates() {
   try {
     updateInfo.value = await call<UpdateCheck>('update_check', {
       feedUrl: draft.value.updateFeed,
-      current: appInfo.value?.version ?? '0.10.0'
+      current: appInfo.value?.version
     })
-    if (!updateInfo.value.available) ide.notify('Kudo is up to date', 'success')
+    if (!updateInfo.value.available) ide.notify('Kodra is up to date', 'success')
   } catch (err) {
     updateError.value = String(err)
   } finally {
@@ -193,15 +193,21 @@ async function checkUpdates() {
 }
 
 async function downloadUpdate() {
-  if (!updateInfo.value?.url) return
+  const update = updateInfo.value
+  if (!update?.url) return
+  if (!update.sha256) {
+    updateError.value = 'This feed does not publish a SHA-256 checksum, so Kodra will not download it.'
+    return
+  }
   downloading.value = true
   updateError.value = ''
   try {
-    downloaded.value = await call('update_download', {
-      url: updateInfo.value.url,
-      fileName: updateInfo.value.url.split('/').pop()
+    downloaded.value = await call<UpdateDownload>('update_download', {
+      url: update.url,
+      fileName: update.url.split('/').pop(),
+      sha256: update.sha256
     })
-    ide.notify('Installer downloaded', 'success')
+    ide.notify('Installer downloaded and checksum verified', 'success')
   } catch (err) {
     updateError.value = String(err)
   } finally {
@@ -263,7 +269,7 @@ watch(
       <div class="modal settings-modal">
         <div class="modal-head">
           <h2>Settings</h2>
-          <span class="hint">Kudo {{ appInfo?.version ?? '0.10.0' }}</span>
+          <span class="hint">Kodra {{ appInfo?.version ?? 'dev' }}</span>
           <div style="flex: 1" />
           <button class="icon-btn" @click="close"><X :size="15" /></button>
         </div>
@@ -508,7 +514,7 @@ watch(
               <div class="pane-title" style="margin-top: 18px">Language servers</div>
               <div class="field">
                 <span class="hint">
-                  Kudo starts a language server for a file's language when one is installed. Detected
+                  Kodra starts a language server for a file's language when one is installed. Detected
                   automatically from PATH.
                 </span>
                 <div class="lsp-list">
@@ -694,7 +700,7 @@ watch(
                   placeholder="Leave empty to start from the Browser start panel"
                 />
                 <span class="hint">
-                  Optional. Opened by the browser panel and Ctrl+Shift+B; Kudo never embeds its
+                  Optional. Opened by the browser panel and Ctrl+Shift+B; Kodra never embeds its
                   own address.
                 </span>
               </div>
@@ -727,11 +733,12 @@ watch(
                   v-model="draft.updateFeed"
                   class="input"
                   spellcheck="false"
-                  placeholder="https://example.com/versions.json"
+                  placeholder="https://github.com/J4NNEY/kodra-ide/releases/latest/download/latest.json"
                 />
                 <span class="hint">
-                  Tauri-style manifest: <code>version</code>, <code>notes</code>,
-                  <code>pub_date</code> and <code>platforms[platform].url</code>.
+                  Tauri-style manifest with <code>version</code>, <code>notes</code>,
+                  <code>pub_date</code> and a <code>sha256</code> per platform. Downloads are verified
+                  against that checksum.
                 </span>
               </div>
 
@@ -756,7 +763,7 @@ watch(
               <div class="about">
                 <div class="empty-mark" style="width: 52px; height: 52px; font-size: 22px">K</div>
                 <div>
-                  <h3 style="margin: 0 0 2px">Kudo {{ appInfo?.version ?? '0.10.0' }}</h3>
+                  <h3 style="margin: 0 0 2px">Kodra {{ appInfo?.version ?? 'dev' }}</h3>
                   <p class="hint" style="margin: 0">
                     A clean-room desktop IDE built with Tauri v2, Nuxt 3 and Rust.
                   </p>
@@ -788,14 +795,14 @@ watch(
 
                 <div v-if="updateInfo?.available" class="update-body">
                   <div class="row" style="justify-content: space-between">
-                    <span class="mono">{{ appInfo?.version ?? '0.10.0' }} → {{ updateInfo.latestVersion }}</span>
+                    <span class="mono">{{ appInfo?.version ?? 'dev' }} → {{ updateInfo.latestVersion }}</span>
                     <span class="hint">{{ updateInfo.publishedAt }}</span>
                   </div>
                   <pre v-if="updateInfo.notes" class="update-notes">{{ updateInfo.notes }}</pre>
                   <div class="row">
                     <button
                       class="btn primary sm"
-                      :disabled="downloading || !updateInfo.url"
+                      :disabled="downloading || !updateInfo.url || !updateInfo.sha256"
                       @click="downloadUpdate"
                     >
                       <Loader2 v-if="downloading" :size="12" class="spin" />
@@ -811,9 +818,13 @@ watch(
                   </div>
                   <span v-if="downloaded" class="hint">
                     {{ downloaded.fileName }} · {{ (downloaded.bytes / 1024 / 1024).toFixed(1) }} MB
+                    <template v-if="downloaded.verified"> · SHA-256 verified</template>
                   </span>
                   <span v-if="!updateInfo.url" class="hint" style="color: var(--red)">
                     The feed has no build for this platform.
+                  </span>
+                  <span v-else-if="!updateInfo.sha256" class="hint" style="color: var(--red)">
+                    The feed has no SHA-256 checksum for this build, so downloading is disabled.
                   </span>
                 </div>
                 <div v-else-if="updateInfo" class="hint">You are running the latest version.</div>

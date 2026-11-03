@@ -15,6 +15,7 @@ pub fn run() {
                 .path()
                 .app_config_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."));
+            state::migrate_legacy_data(&config_dir);
             *state.config_dir.write() = config_dir;
             state.load_settings();
             Ok(())
@@ -156,5 +157,5 @@ pub fn run() {
             commands::updater::update_reveal,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Kudo");
+        .expect("error while running Kodra");
 }

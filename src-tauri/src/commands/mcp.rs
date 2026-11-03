@@ -161,7 +161,7 @@ pub async fn mcp_connect(
             json!({
                 "protocolVersion": "2024-11-05",
                 "capabilities": { "roots": { "listChanged": true } },
-                "clientInfo": { "name": "kudo", "version": "0.1.0" }
+                "clientInfo": { "name": "kodra", "version": "0.1.0" }
             }),
         )
         .await

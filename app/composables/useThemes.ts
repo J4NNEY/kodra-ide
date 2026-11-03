@@ -14,8 +14,8 @@ import {
  * Keeps the selected theme in sync with the CSS variables the shell renders.
  */
 export function useThemes() {
-  const settings = useState<Settings>('kudo:settings', () => structuredClone(defaultSettings))
-  const prefersLight = useState<boolean>('kudo:prefers-light', () => false)
+  const settings = useState<Settings>('kodra:settings', () => structuredClone(defaultSettings))
+  const prefersLight = useState<boolean>('kodra:prefers-light', () => false)
   const extensionThemes = useState<Theme[]>(EXTENSION_THEMES_KEY, () => [])
 
   const all = computed<Theme[]>(() => {

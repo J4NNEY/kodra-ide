@@ -206,9 +206,9 @@ interface OccurrenceRange {
 
 const setOccurrences = StateEffect.define<OccurrenceRange[]>()
 const occurrenceMark = {
-  text: Decoration.mark({ class: 'cm-kudo-occurrence-text' }),
-  read: Decoration.mark({ class: 'cm-kudo-occurrence' }),
-  write: Decoration.mark({ class: 'cm-kudo-occurrence-write' })
+  text: Decoration.mark({ class: 'cm-kodra-occurrence-text' }),
+  read: Decoration.mark({ class: 'cm-kodra-occurrence' }),
+  write: Decoration.mark({ class: 'cm-kodra-occurrence-write' })
 }
 const occurrenceField = StateField.define<DecorationSet>({
   create: () => Decoration.none,
@@ -246,7 +246,7 @@ function semanticMark(type: string): Decoration {
   const key = type.replace(/[^a-z0-9]/gi, '').toLowerCase()
   let mark = semanticMarks.get(key)
   if (!mark) {
-    mark = Decoration.mark({ class: `cm-kudo-sem-${key}` })
+    mark = Decoration.mark({ class: `cm-kodra-sem-${key}` })
     semanticMarks.set(key, mark)
   }
   return mark
@@ -284,7 +284,7 @@ class InlayWidget extends WidgetType {
 
   override toDOM(): HTMLElement {
     const span = document.createElement('span')
-    span.className = `cm-kudo-inlay cm-kudo-inlay-${this.kind}`
+    span.className = `cm-kodra-inlay cm-kodra-inlay-${this.kind}`
     span.textContent = this.text
     // Hints are decoration, not code: keep them out of the accessibility tree.
     span.setAttribute('aria-hidden', 'true')
@@ -906,7 +906,7 @@ function lspExtensions() {
           end: Math.min(line.to, pos + 1),
           create() {
             const dom = document.createElement('div')
-            dom.className = 'cm-kudo-hover'
+            dom.className = 'cm-kodra-hover'
             dom.innerHTML = renderMarkdown(markdown)
             return { dom }
           }
@@ -931,7 +931,7 @@ function lspExtensions() {
 
 onMounted(() => {
   if (!host.value) return
-  window.addEventListener('kudo:editor-insert', onInsert)
+  window.addEventListener('kodra:editor-insert', onInsert)
   view = new EditorView({
     parent: host.value,
     state: EditorState.create({
@@ -1030,7 +1030,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('kudo:editor-insert', onInsert)
+  window.removeEventListener('kodra:editor-insert', onInsert)
   if (syncTimer) {
     clearTimeout(syncTimer)
     syncTimer = null
@@ -1148,7 +1148,7 @@ defineExpose({ focus: () => view?.focus() })
   </div>
   <div v-else class="code-shell">
     <div ref="host" class="code-host" />
-    <div v-if="signature && activeSignature" class="cm-kudo-signature" :style="signatureStyle">
+    <div v-if="signature && activeSignature" class="cm-kodra-signature" :style="signatureStyle">
       <div class="sig-head">
         <span class="sig-label"
           ><span
@@ -1177,7 +1177,7 @@ defineExpose({ focus: () => view?.focus() })
   height: 100%;
   min-height: 0;
 }
-.cm-kudo-signature {
+.cm-kodra-signature {
   position: absolute;
   z-index: 30;
   pointer-events: none;

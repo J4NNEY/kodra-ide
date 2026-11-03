@@ -5,7 +5,7 @@ import { EXTENSION_THEMES_KEY, builtinThemes, kindOfTheme, type Theme } from '..
  * so canvas-based widgets (xterm, CodeMirror highlighting) can follow it.
  */
 export function usePrefersLight() {
-  const prefersLight = useState<boolean>('kudo:prefers-light', () => false)
+  const prefersLight = useState<boolean>('kodra:prefers-light', () => false)
 
   if (import.meta.client) {
     onMounted(() => {

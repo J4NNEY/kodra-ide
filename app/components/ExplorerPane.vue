@@ -3,7 +3,7 @@ import { FilePlus2, FolderPlus, RefreshCw, ChevronsDownUp, FolderOpen } from 'lu
 import { call } from '../lib/api'
 
 const ide = useIde()
-const treeVersion = useState<number>('kudo:tree-version', () => 0)
+const treeVersion = useState<number>('kodra:tree-version', () => 0)
 const collapsing = ref(false)
 
 async function create(isDir: boolean) {

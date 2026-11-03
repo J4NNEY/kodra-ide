@@ -9,6 +9,15 @@ src-tauri/gen/
 *.log
 e2e-*.json
 coverage/
+release/
+
+# Signing material - never commit certificates or their passwords
+*.pfx
+*.p12
+*.cer
+*.key
+.env
+.env.*
 
 # Editable settings written at runtime
 .DS_Store

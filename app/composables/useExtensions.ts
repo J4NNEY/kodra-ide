@@ -20,10 +20,10 @@ export interface InstalledSnippet extends SnippetContribution {
 export function useExtensions() {
   const ide = useIde()
   const registry = useThemes()
-  const list = useState<ExtensionInfo[]>('kudo:extensions', () => [])
-  const loading = useState<boolean>('kudo:extensions-loading', () => false)
-  const error = useState<string>('kudo:extensions-error', () => '')
-  const directory = useState<string>('kudo:extensions-dir', () => '')
+  const list = useState<ExtensionInfo[]>('kodra:extensions', () => [])
+  const loading = useState<boolean>('kodra:extensions-loading', () => false)
+  const error = useState<string>('kodra:extensions-error', () => '')
+  const directory = useState<string>('kodra:extensions-dir', () => '')
 
   const enabled = computed(() =>
     list.value.filter((extension) => extension.enabled && !extension.error)
@@ -107,7 +107,7 @@ export function useExtensions() {
       return false
     }
     const text = expandSnippet(snippet.body)
-    window.dispatchEvent(new CustomEvent<string>('kudo:editor-insert', { detail: text }))
+    window.dispatchEvent(new CustomEvent<string>('kodra:editor-insert', { detail: text }))
     return true
   }
 

@@ -220,14 +220,14 @@ where
                         .and_then(|c| c.as_str())
                         .unwrap_or("")
                         .to_string();
-                    // Kudo runs the debuggee itself; adapters that ask the client
+                    // Kodra runs the debuggee itself; adapters that ask the client
                     // for a terminal are told we cannot, so they fall back.
                     session
                         .respond(
                             request_seq,
                             &command,
                             false,
-                            "Kudo cannot run the program in a terminal",
+                            "Kodra cannot run the program in a terminal",
                         )
                         .await;
                 }
@@ -263,7 +263,7 @@ async fn read_listen_address<R: AsyncBufRead + Unpin>(reader: &mut R) -> Result<
 }
 
 /// Delve builds the debuggee next to its package (`__debug_bin<rand>.exe`) and
-/// removes it on a clean exit. Kudo tears sessions down by killing the adapter,
+/// removes it on a clean exit. Kodra tears sessions down by killing the adapter,
 /// so drop those leftovers when a Delve session starts or stops.
 fn cleanup_delve_artifacts(dir: &str) {
     let Ok(entries) = std::fs::read_dir(dir) else {
@@ -405,8 +405,8 @@ pub async fn dap_start(
         .request(
             "initialize",
             json!({
-                "clientID": "kudo",
-                "clientName": "Kudo",
+                "clientID": "kodra",
+                "clientName": "Kodra",
                 "adapterID": req.adapter,
                 "pathFormat": "path",
                 "linesStartAt1": true,

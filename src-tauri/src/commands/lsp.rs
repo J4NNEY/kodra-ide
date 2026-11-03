@@ -331,7 +331,7 @@ pub async fn lsp_start(
                         "publishDiagnostics": { "relatedInformation": true }
                     }
                 },
-                "clientInfo": { "name": "kudo", "version": env!("CARGO_PKG_VERSION") }
+                "clientInfo": { "name": "kodra", "version": env!("CARGO_PKG_VERSION") }
             }),
         )
         .await

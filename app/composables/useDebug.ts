@@ -179,22 +179,22 @@ let listening = false
 
 export function useDebug() {
   const ide = useIde()
-  const status = useState<DebugStatus>('kudo:debug-status', () => 'idle')
-  const sessionId = useState<string | null>('kudo:debug-session', () => null)
-  const error = useState<string>('kudo:debug-error', () => '')
-  const config = useState<DebugConfig>('kudo:debug-config', () => defaultConfig(null))
-  const breakpoints = useState<Breakpoint[]>('kudo:debug-breakpoints', () => [])
-  const frames = useState<DebugFrame[]>('kudo:debug-frames', () => [])
-  const scopes = useState<DebugScope[]>('kudo:debug-scopes', () => [])
-  const variables = useState<DebugVariable[]>('kudo:debug-variables', () => [])
-  const threadId = useState<number>('kudo:debug-thread', () => 0)
-  const stopReason = useState<string>('kudo:debug-reason', () => '')
-  const output = useState<DebugOutputLine[]>('kudo:debug-output', () => [])
-  const initializedSeen = useState<boolean>('kudo:debug-initialized', () => false)
-  const adapters = useState<Record<string, string>>('kudo:debug-adapters', () => ({}))
-  const capabilities = useState<Record<string, unknown>>('kudo:debug-capabilities', () => ({}))
+  const status = useState<DebugStatus>('kodra:debug-status', () => 'idle')
+  const sessionId = useState<string | null>('kodra:debug-session', () => null)
+  const error = useState<string>('kodra:debug-error', () => '')
+  const config = useState<DebugConfig>('kodra:debug-config', () => defaultConfig(null))
+  const breakpoints = useState<Breakpoint[]>('kodra:debug-breakpoints', () => [])
+  const frames = useState<DebugFrame[]>('kodra:debug-frames', () => [])
+  const scopes = useState<DebugScope[]>('kodra:debug-scopes', () => [])
+  const variables = useState<DebugVariable[]>('kodra:debug-variables', () => [])
+  const threadId = useState<number>('kodra:debug-thread', () => 0)
+  const stopReason = useState<string>('kodra:debug-reason', () => '')
+  const output = useState<DebugOutputLine[]>('kodra:debug-output', () => [])
+  const initializedSeen = useState<boolean>('kodra:debug-initialized', () => false)
+  const adapters = useState<Record<string, string>>('kodra:debug-adapters', () => ({}))
+  const capabilities = useState<Record<string, unknown>>('kodra:debug-capabilities', () => ({}))
   const watchResults = useState<Array<{ expression: string; result: string; error: string }>>(
-    'kudo:debug-watch',
+    'kodra:debug-watch',
     () => []
   )
 
@@ -255,7 +255,7 @@ export function useDebug() {
       return
     }
     try {
-      const stored = JSON.parse(localStorage.getItem(`kudo:debug:${key}`) ?? 'null')
+      const stored = JSON.parse(localStorage.getItem(`kodra:debug:${key}`) ?? 'null')
       config.value = {
         ...defaultConfig(key),
         ...(stored?.config ?? {})
@@ -264,7 +264,7 @@ export function useDebug() {
       config.value = defaultConfig(key)
     }
     try {
-      const saved = JSON.parse(localStorage.getItem(`kudo:breakpoints:${key}`) ?? 'null')
+      const saved = JSON.parse(localStorage.getItem(`kodra:breakpoints:${key}`) ?? 'null')
       breakpoints.value = Array.isArray(saved)
         ? saved
             .filter((bp: any) => bp && typeof bp.path === 'string' && Number.isFinite(bp.line))
@@ -286,11 +286,11 @@ export function useDebug() {
     const key = workspaceKey()
     if (!key) return
     localStorage.setItem(
-      `kudo:debug:${key}`,
+      `kodra:debug:${key}`,
       JSON.stringify({ config: config.value })
     )
     localStorage.setItem(
-      `kudo:breakpoints:${key}`,
+      `kodra:breakpoints:${key}`,
       JSON.stringify(
         breakpoints.value.map((bp) => ({
           path: bp.path,

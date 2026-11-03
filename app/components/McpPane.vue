@@ -178,7 +178,7 @@ async function runTool() {
         <PlugZap :size="24" :stroke-width="1.4" style="opacity: 0.4" />
         <p>No MCP servers configured.</p>
         <span class="hint" style="text-align: center">
-          Connect tool servers over stdio. Kudo performs the initialize handshake and
+          Connect tool servers over stdio. Kodra performs the initialize handshake and
           exposes their tools to the agent.
         </span>
       </div>
@@ -290,7 +290,7 @@ async function runTool() {
             </div>
             <div v-if="formError" class="hint" style="color: var(--red)">{{ formError }}</div>
             <div class="callout">
-              Kudo speaks the stdio transport: newline-delimited JSON-RPC, protocol 2024-11-05.
+              Kodra speaks the stdio transport: newline-delimited JSON-RPC, protocol 2024-11-05.
             </div>
           </div>
           <div class="modal-foot">

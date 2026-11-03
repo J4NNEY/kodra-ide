@@ -21,9 +21,9 @@ const debug = useDebug()
 const tests = useTests()
 const tasks = useTasks()
 const format = useFormat()
-const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
+const cursor = useState('kodra:cursor', () => ({ line: 1, column: 1, selected: 0 }))
 const info = useState<{ name: string; version: string; platform: string } | null>(
-  'kudo:app-info',
+  'kodra:app-info',
   () => null
 )
 const syncing = ref(false)
@@ -85,7 +85,7 @@ onMounted(async () => {
   try {
     info.value = await call('app_info')
   } catch {
-    info.value = { name: 'Kudo', version: '0.10.0', platform: 'browser' }
+    info.value = { name: 'Kodra', version: 'dev', platform: 'browser' }
   }
 })
 </script>
@@ -195,7 +195,7 @@ onMounted(async () => {
 
     <span class="status-item" :title="isTauri() ? info?.platform : 'browser mock'">
       <span class="dot-live" :style="isTauri() ? '' : 'background: var(--orange); box-shadow: none'" />
-      {{ info?.name ?? 'Kudo' }} {{ info?.version ?? '0.10.0' }}
+      {{ info?.name ?? 'Kodra' }} {{ info?.version ?? 'dev' }}
     </span>
   </footer>
 </template>

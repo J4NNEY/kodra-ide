@@ -82,18 +82,18 @@ function safeFit(): boolean {
     fit.fit()
     return true
   } catch (err) {
-    console.warn('[kudo] terminal fit skipped', err)
+    console.warn('[kodra] terminal fit skipped', err)
     return false
   }
 }
 
 function promptMock() {
-  write('\r\n\x1b[38;5;179mPS\x1b[0m \x1b[38;5;245mC:\\demo\\kudo-workspace\x1b[0m> ')
+  write('\r\n\x1b[38;5;179mPS\x1b[0m \x1b[38;5;245mC:\\demo\\kodra-workspace\x1b[0m> ')
 }
 
 function mockBanner() {
   write(
-    `\x1b[38;5;179mKudo terminal\x1b[0m \x1b[38;5;245m(${shellName()}, browser mock)\x1b[0m\r\n`
+    `\x1b[38;5;179mKodra terminal\x1b[0m \x1b[38;5;245m(${shellName()}, browser mock)\x1b[0m\r\n`
   )
   write(
     '\x1b[38;5;245mStart the desktop shell with `pnpm desktop` for a real shell session.\x1b[0m'

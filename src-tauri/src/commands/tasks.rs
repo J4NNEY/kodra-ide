@@ -24,14 +24,14 @@ const MAX_MANIFEST_BYTES: u64 = 512 * 1024;
 /// Keep at most this many finished runs around for cancellation bookkeeping.
 const MAX_RUNS: usize = 24;
 
-/// A runnable task detected in the workspace, or declared in `.kudo/tasks.json`.
+/// A runnable task detected in the workspace, or declared in `.kodra/tasks.json`.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskDef {
-    /// Stable key inside one detection snapshot (`kudo:0`, `package:scripts:build`).
+    /// Stable key inside one detection snapshot (`kodra:0`, `package:scripts:build`).
     pub id: String,
     pub label: String,
-    /// `kudo`, `package` or `make`.
+    /// `kodra`, `package` or `make`.
     pub source: String,
     /// Command line preview shown next to the label.
     pub detail: String,
@@ -120,9 +120,16 @@ fn group_for(name: &str, raw: &str) -> String {
     }
 }
 
-/// Declarative tasks from `.kudo/tasks.json`.
+/// Declarative tasks from `.kodra/tasks.json` (falling back to the
+/// pre-rename `.kudo/tasks.json`).
 fn manifest_tasks(root: &Path, out: &mut Vec<TaskDef>) {
-    let path = root.join(".kudo").join("tasks.json");
+    let mut path = root.join(".kodra").join("tasks.json");
+    if !path.exists() {
+        let legacy = root.join(".kudo").join("tasks.json");
+        if legacy.exists() {
+            path = legacy;
+        }
+    }
     let Some(raw) = read_manifest(&path) else { return };
     let Ok(manifest) = serde_json::from_str::<Manifest>(&raw) else { return };
     for (index, task) in manifest.tasks.into_iter().take(MAX_TASKS).enumerate() {
@@ -134,9 +141,9 @@ fn manifest_tasks(root: &Path, out: &mut Vec<TaskDef>) {
         let group = group_for(label, &task.group);
         let is_default = task.is_default && group == "build";
         out.push(TaskDef {
-            id: format!("kudo:{index}"),
+            id: format!("kodra:{index}"),
             label: label.chars().take(120).collect(),
-            source: "kudo".into(),
+            source: "kodra".into(),
             detail: command.to_string(),
             command: command.to_string(),
             cwd: clean_cwd(&task.cwd),
@@ -315,7 +322,7 @@ fn pick_default(tasks: &mut [TaskDef]) {
     }
 }
 
-/// Detect every task Kudo can run in this workspace.
+/// Detect every task Kodra can run in this workspace.
 pub fn detect_tasks(root: &Path) -> Vec<TaskDef> {
     let mut tasks = Vec::new();
     manifest_tasks(root, &mut tasks);

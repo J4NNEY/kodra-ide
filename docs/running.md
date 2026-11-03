@@ -1,14 +1,14 @@
-# Cara menjalankan Kudo
+# Cara menjalankan Kodra
 
-Panduan langkah demi langkah untuk menjalankan project `sokudo-clone` di mesin lokal, baik sebagai
+Panduan langkah demi langkah untuk menjalankan project `sokodra-clone` di mesin lokal, baik sebagai
 aplikasi desktop Tauri maupun sebagai preview browser.
 
 - **Hasil akhir** yang diuji: Windows 11, Node 26.12.1, pnpm 9.15.0, Rust 1.96.0.
-- **Versi project** saat dokumen ini ditulis: `0.12.1`.
+- **Versi project** saat dokumen ini ditulis: `1.0.0`.
 - Semua perintah dijalankan dari folder project:
 
 ```powershell
-cd C:\belajar\ReaProject\Gokuue\sokudo-clone
+cd C:\belajar\ReaProject\Gokuue\sokodra-clone
 ```
 
 ## 0. Ringkasan perintah
@@ -93,7 +93,7 @@ Yang perlu diketahui:
   file tidak benar-benar dibaca/ditulis.
 - Hot reload berjalan; simpan file dan UI langsung berubah.
 - Hentikan dengan `Ctrl+C`.
-- **Pane Browser** tidak akan memuat `http://localhost:3000` karena itu origin Kudo sendiri; alamat
+- **Pane Browser** tidak akan memuat `http://localhost:3000` karena itu origin Kodra sendiri; alamat
   tersebut menampilkan panel peringatan dan tombol *Open in system browser*. Arahkan preview ke dev
   server aplikasi lain (mis. `http://localhost:5173`), atau isi *Browser preview home* di
   **Settings → Integrations**.
@@ -108,7 +108,7 @@ Perintah ini menjalankan `tauri dev`, yaitu:
 
 1. `pnpm dev` di port 3000 (dikelola otomatis),
 2. compile backend Rust mode debug,
-3. membuka jendela **Kudo** yang memuat frontend tersebut.
+3. membuka jendela **Kodra** yang memuat frontend tersebut.
 
 - Compile pertama bisa 1-2 menit; berikutnya beberapa detik.
 - Perubahan frontend = hot reload. Perubahan Rust = recompile otomatis lalu jendela restart.
@@ -127,14 +127,19 @@ sekitar 5-7 menit.
 Hasil:
 
 ```
-src-tauri/target/release/kudo.exe
-src-tauri/target/release/bundle/nsis/Kudo_<versi>_x64-setup.exe   (~3 MB)
+src-tauri/target/release/kodra.exe
+src-tauri/target/release/bundle/nsis/Kodra_<versi>_x64-setup.exe   (~3 MB)
 ```
 
 Varian lain:
 
+- `pnpm release:win` - typecheck + `cargo test` + build, lalu menulis `release/Kodra_<versi>_x64-setup.exe`,
+  `release/latest.json` (berisi SHA-256) dan `release/checksums.txt`. Checklist lengkap ada di
+  [`docs/releasing.md`](releasing.md).
 - `pnpm build` - frontend statis saja ke `.output/public`.
 - `pnpm preview` - menyajikan hasil `pnpm build` untuk pengecekan cepat.
+- `pnpm test:rust` - unit test Rust (updater dan migrasi data).
+- `pnpm icons` - membuat ulang semua ikon dari `scripts/make-icons.ps1`.
 - Installer hasil build **tidak** butuh Node/Rust di komputer tujuan, tapi tetap butuh WebView2.
 
 ## 6. Typecheck dan cek backend
@@ -172,7 +177,7 @@ Dideteksi dari `PATH`:
 | JSON | `vscode-json-language-server` | `npm i -g vscode-langservers-extracted` |
 | Shell | `bash-language-server` | `npm i -g bash-language-server` |
 
-Sejak 0.11.0, selain completion/hover/go-to-definition, Kudo memakai server yang sama untuk:
+Sejak 0.11.0, selain completion/hover/go-to-definition, Kodra memakai server yang sama untuk:
 
 | Aksi | Shortcut | Command palette |
 | --- | --- | --- |
@@ -196,7 +201,7 @@ Signature help muncul otomatis saat mengetik `(` atau `,` di dalam pemanggilan f
 disorot dan dokumentasi server ditampilkan. Simbol di bawah kursor juga disorot di semua
 kemunculannya (read/write dibedakan) tanpa perlu menyeleksi kata.
 
-Completion sekarang menerapkan `textEdit` dan `additionalTextEdits` dari server. Untuk Dart, Kudo
+Completion sekarang menerapkan `textEdit` dan `additionalTextEdits` dari server. Untuk Dart, Kodra
 memanggil `completionItem/resolve` lebih dulu supaya memilih class yang belum di-import sekaligus
 menambahkan baris `import` dalam satu langkah undo.
 
@@ -228,7 +233,7 @@ Install lokal di `node_modules` project selalu menang atas versi global. Format 
 save **default mati**; nyalakan di `Settings -> Editor` atau lewat command palette (`Format: ...`).
 `Shift+Alt+F` memformat file aktif tanpa menyimpan.
 
-Kalau tidak ada formatter eksternal untuk bahasa tersebut, Kudo meminta
+Kalau tidak ada formatter eksternal untuk bahasa tersebut, Kodra meminta
 `textDocument/formatting` ke language server yang sedang berjalan (Dart memakai jalur ini). Toast-nya
 menyebut server, mis. `Formatted with dart language server`.
 
@@ -236,15 +241,18 @@ menyebut server, mis. `Formatted with dart language server`.
 
 | Data | Lokasi |
 | --- | --- |
-| Settings | `%APPDATA%\dev.kudo.desktop\settings.json` (Windows) |
-| | `~/Library/Application Support/dev.kudo.desktop/settings.json` (macOS) |
-| | `~/.config/dev.kudo.desktop/settings.json` (Linux) |
+| Settings | `%APPDATA%\app.kodra.desktop\settings.json` (Windows) |
+| | `~/Library/Application Support/app.kodra.desktop/settings.json` (macOS) |
+| | `~/.config/app.kodra.desktop/settings.json` (Linux) |
 | Checkpoint agent | `<config dir>\checkpoints\<workspace-key>\` |
 | Riwayat chat, session restore, layout | `localStorage` WebView (per workspace) |
 
 Settings berisi tema, font, toggles `formatOnSave`/`lintOnSave`, toggle `inlayHints` dan
 `semanticHighlighting`, daftar workspace terakhir, MCP server, dan API key agent. Untuk mengembalikan
-ke default, tutup Kudo lalu hapus `settings.json`.
+ke default, tutup Kodra lalu hapus `settings.json`.
+
+Saat pertama kali dijalankan, Kodra menyalin `settings.json`, `checkpoints/`, dan `extensions/` dari
+folder lama `dev.kudo.desktop` bila folder baru belum punya settings. Folder lama tidak dihapus.
 
 ## 9. Debugging lewat CDP (opsional)
 
@@ -258,7 +266,7 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:9222/json/list
 ```
 
 Di dalam WebView tersedia `window.__TAURI_INTERNALS__.invoke('<command>', args)`. Build dev juga
-mengekspos `window.__kudoOpenFolder(path)` untuk membuka workspace tanpa dialog.
+mengekspos `window.__kodraOpenFolder(path)` untuk membuka workspace tanpa dialog.
 
 ## 10. Troubleshooting
 
@@ -286,7 +294,7 @@ pnpm install
 
 ## 11. Checklist cepat setelah aplikasi terbuka
 
-1. `Kudo <versi>` tampil di status bar.
+1. `Kodra <versi>` tampil di status bar.
 2. Buka folder lewat **Open Folder** (atau bagian *Recent*), pastikan judul jendela berganti nama
    folder.
 3. Klik file di explorer, edit, `Ctrl+S` - titik dirty hilang.
@@ -320,4 +328,5 @@ pnpm install
 | `Ctrl+.` | quick fix / code action |
 
 Dokumen lain: [`README.md`](../README.md) untuk ringkasan fitur dan arsitektur,
-[`docs/updater.md`](updater.md) untuk update feed.
+[`docs/updater.md`](updater.md) untuk update feed, dan [`docs/releasing.md`](releasing.md) untuk
+checklist rilis termasuk code signing.

@@ -28,7 +28,7 @@ useKeybindings()
 // Dev-only bridge so E2E sessions can switch folders through the same code
 // path as the File menu (the native picker cannot be driven from CDP).
 if (import.meta.dev && typeof window !== 'undefined') {
-  ;(window as unknown as Record<string, unknown>).__kudoOpenFolder = (path: string) =>
+  ;(window as unknown as Record<string, unknown>).__kodraOpenFolder = (path: string) =>
     ide.openFolder(path)
 }
 
@@ -87,7 +87,7 @@ watch(
   }
 )
 
-useHead({ title: () => (ide.workspace.value ? `${ide.workspace.value.name} — Kudo` : 'Kudo') })
+useHead({ title: () => (ide.workspace.value ? `${ide.workspace.value.name} — Kodra` : 'Kodra') })
 </script>
 
 <template>
@@ -135,7 +135,7 @@ useHead({ title: () => (ide.workspace.value ? `${ide.workspace.value.name} — K
 
   <div v-if="booting" class="boot-splash">
     <div class="brand-mark" style="width: 34px; height: 34px; font-size: 16px">K</div>
-    <span>Starting Kudo…</span>
+    <span>Starting Kodra…</span>
   </div>
 </template>
 

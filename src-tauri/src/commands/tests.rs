@@ -133,7 +133,7 @@ fn crate_dir(root: &Path, file: &Path) -> String {
     String::new()
 }
 
-/// Detect tests for the four frameworks Kudo can run today.
+/// Detect tests for the four frameworks Kodra can run today.
 pub fn detect_tests(root: &Path) -> Vec<TestFile> {
     let go_re = Regex::new(r"(?m)^func\s+(Test\w*|Benchmark\w*|Fuzz\w*)\s*\(").unwrap();
     let rust_re = Regex::new(
@@ -184,7 +184,7 @@ pub fn detect_tests(root: &Path) -> Vec<TestFile> {
             "js" | "jsx" | "ts" | "tsx" | "mjs" | "cjs"
                 if name.contains(".test.") || name.contains(".spec.") =>
             {
-                // Node runners print their own results; Kudo shows them in the output.
+                // Node runners print their own results; Kodra shows them in the output.
                 ("node", &py_re)
             }
             _ => continue,

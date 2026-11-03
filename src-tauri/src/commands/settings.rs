@@ -53,7 +53,7 @@ pub struct AppInfo {
 #[tauri::command]
 pub fn app_info(state: State<'_, AppState>) -> AppInfo {
     AppInfo {
-        name: "Kudo".into(),
+        name: "Kodra".into(),
         version: env!("CARGO_PKG_VERSION").into(),
         platform: std::env::consts::OS.into(),
         arch: std::env::consts::ARCH.into(),

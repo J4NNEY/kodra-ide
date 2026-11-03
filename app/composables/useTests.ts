@@ -81,26 +81,26 @@ function normPath(path: string): string {
 }
 
 export function useTests() {
-  const files = useState<TestFile[]>('kudo:tests-files', () => [])
-  const toolchain = useState<Record<string, string>>('kudo:tests-toolchain', () => ({}))
-  const loading = useState<boolean>('kudo:tests-loading', () => false)
-  const error = useState<string>('kudo:tests-error', () => '')
-  const detectedAt = useState<number>('kudo:tests-detected-at', () => 0)
+  const files = useState<TestFile[]>('kodra:tests-files', () => [])
+  const toolchain = useState<Record<string, string>>('kodra:tests-toolchain', () => ({}))
+  const loading = useState<boolean>('kodra:tests-loading', () => false)
+  const error = useState<string>('kodra:tests-error', () => '')
+  const detectedAt = useState<number>('kodra:tests-detected-at', () => 0)
 
-  const runStatus = useState<RunStatus>('kudo:tests-run-status', () => 'idle')
-  const runId = useState<string | null>('kudo:tests-run-id', () => null)
-  const runLabel = useState<string>('kudo:tests-run-label', () => '')
-  const runCwd = useState<string>('kudo:tests-run-cwd', () => '')
-  const queue = useState<TestRunRequest[]>('kudo:tests-queue', () => [])
-  const activeRequest = useState<TestRunRequest | null>('kudo:tests-active', () => null)
-  const cancelled = useState<boolean>('kudo:tests-cancelled', () => false)
-  const failedAny = useState<boolean>('kudo:tests-failed-any', () => false)
-  const exitCode = useState<number | null>('kudo:tests-exit-code', () => null)
-  const durationMs = useState<number>('kudo:tests-duration', () => 0)
-  const output = useState<TestOutputLine[]>('kudo:tests-output', () => [])
-  const results = useState<Record<string, TestStatus>>('kudo:tests-results', () => ({}))
-  const fileResults = useState<Record<string, TestStatus>>('kudo:tests-file-results', () => ({}))
-  const collapsed = useState<Record<string, boolean>>('kudo:tests-collapsed', () => ({}))
+  const runStatus = useState<RunStatus>('kodra:tests-run-status', () => 'idle')
+  const runId = useState<string | null>('kodra:tests-run-id', () => null)
+  const runLabel = useState<string>('kodra:tests-run-label', () => '')
+  const runCwd = useState<string>('kodra:tests-run-cwd', () => '')
+  const queue = useState<TestRunRequest[]>('kodra:tests-queue', () => [])
+  const activeRequest = useState<TestRunRequest | null>('kodra:tests-active', () => null)
+  const cancelled = useState<boolean>('kodra:tests-cancelled', () => false)
+  const failedAny = useState<boolean>('kodra:tests-failed-any', () => false)
+  const exitCode = useState<number | null>('kodra:tests-exit-code', () => null)
+  const durationMs = useState<number>('kodra:tests-duration', () => 0)
+  const output = useState<TestOutputLine[]>('kodra:tests-output', () => [])
+  const results = useState<Record<string, TestStatus>>('kodra:tests-results', () => ({}))
+  const fileResults = useState<Record<string, TestStatus>>('kodra:tests-file-results', () => ({}))
+  const collapsed = useState<Record<string, boolean>>('kodra:tests-collapsed', () => ({}))
 
   const active = computed(() => runStatus.value === 'running')
   const hasTests = computed(() => files.value.length > 0)
@@ -512,14 +512,14 @@ export function useTests() {
 function mockFiles(): TestFile[] {
   return [
     {
-      path: 'C:\\demo\\kudo-workspace\\src\\math.test.ts',
+      path: 'C:\\demo\\kodra-workspace\\src\\math.test.ts',
       rel: 'src/math.test.ts',
       framework: 'node',
       package: 'src',
       tests: []
     },
     {
-      path: 'C:\\demo\\kudo-workspace\\lib\\strutil_test.go',
+      path: 'C:\\demo\\kodra-workspace\\lib\\strutil_test.go',
       rel: 'lib/strutil_test.go',
       framework: 'go',
       package: 'lib',
@@ -529,7 +529,7 @@ function mockFiles(): TestFile[] {
       ]
     },
     {
-      path: 'C:\\demo\\kudo-workspace\\app\\test_models.py',
+      path: 'C:\\demo\\kodra-workspace\\app\\test_models.py',
       rel: 'app/test_models.py',
       framework: 'python',
       package: 'app',

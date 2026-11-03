@@ -32,7 +32,7 @@ pub async fn browser_fetch(
     let started = Instant::now();
 
     let client = reqwest::Client::builder()
-        .user_agent("Kudo/0.1 (browser-preview)")
+        .user_agent("Kodra/0.1 (browser-preview)")
         .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| e.to_string())?;

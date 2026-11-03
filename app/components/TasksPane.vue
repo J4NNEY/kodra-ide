@@ -56,7 +56,7 @@ async function runDefault() {
   ide.panelTab.value = 'tasks'
   ide.panelVisible.value = true
   const started = await tasks.runDefault()
-  if (!started) ide.notify('No default build task. Mark one in .kudo/tasks.json.', 'info')
+  if (!started) ide.notify('No default build task. Mark one in .kodra/tasks.json.', 'info')
 }
 
 function stop() {
@@ -81,12 +81,12 @@ async function createManifest() {
     ]
   }
   try {
-    const path = `${workspace.path}\\.kudo\\tasks.json`
+    const path = `${workspace.path}\\.kodra\\tasks.json`
     await call('write_file', {
       path,
       text: `${JSON.stringify(template, null, 2)}\n`
     })
-    ide.notify('Created .kudo/tasks.json', 'success')
+    ide.notify('Created .kodra/tasks.json', 'success')
     await ide.openFile(path)
     await tasks.detect()
   } catch (err) {
@@ -148,7 +148,7 @@ async function createManifest() {
       <div v-else-if="!tasks.hasTasks.value" class="tests-empty">
         <p>No tasks found.</p>
         <p class="tests-hint">
-          Kudo reads <span class="mono">.kudo/tasks.json</span>, <span class="mono">package.json</span>
+          Kodra reads <span class="mono">.kodra/tasks.json</span>, <span class="mono">package.json</span>
           scripts and <span class="mono">Makefile</span> targets.
         </p>
         <div class="tasks-empty-actions">
@@ -196,7 +196,7 @@ async function createManifest() {
 
         <div v-if="defaults === 0" class="tests-warning task-hint-default">
           No default build task. Add <span class="mono">"isDefault": true</span> to a build task in
-          <span class="mono">.kudo/tasks.json</span>.
+          <span class="mono">.kodra/tasks.json</span>.
         </div>
         <div v-if="missingTools.length" class="tests-warning">
           Tool not on PATH: <strong>{{ missingTools.join(', ') }}</strong>

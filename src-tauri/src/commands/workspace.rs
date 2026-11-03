@@ -446,7 +446,7 @@ fn line_of(text: &str, offset: usize) -> u32 {
 /// Replace a file atomically so a crash cannot leave it half written.
 fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let mut name = path.file_name().map(|n| n.to_os_string()).unwrap_or_default();
-    name.push(".kudo-tmp");
+    name.push(".kodra-tmp");
     let tmp = path.with_file_name(name);
     let permissions = std::fs::metadata(path).ok().map(|m| m.permissions());
     std::fs::write(&tmp, bytes).map_err(|e| e.to_string())?;

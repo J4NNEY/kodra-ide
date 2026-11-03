@@ -1,10 +1,35 @@
-# Kudo
+# Kodra
 
-A desktop IDE for code, terminals, databases and AI agents — built with **Tauri v2 + Nuxt 3 + Rust**.
+A fast desktop IDE for code, terminals, databases and AI agents — built with **Tauri v2 + Nuxt 3 + Rust**.
 
-Kudo is a clean-room implementation inspired by the layout and workflow of [Sokudo](https://sokudo.dev).
-No Sokudo source, assets or compiled frontend code are reused; the design tokens were reproduced from
-public screenshots and the UI is written from scratch.
+Kodra runs entirely on your machine: the editor, terminal, git, debugger, database browser and
+AI agent share one window. Bring your own model key; nothing is uploaded unless you ask the agent
+to run a tool or send a prompt.
+
+## Install (Windows x64)
+
+1. Download `Kodra_1.0.0_x64-setup.exe` from the
+   [latest release](https://github.com/J4NNEY/kodra-ide/releases/latest).
+2. Run it. Kodra installs for the current user (no administrator prompt), into your user profile,
+   and creates Start Menu and desktop shortcuts.
+3. Launch Kodra and open a folder with **File → Open Folder**.
+
+Requirements: Windows 10 1809+ or Windows 11, x64. The installer fetches the Evergreen WebView2
+runtime if it is missing.
+
+The 1.0 installer is **not code-signed yet**, so Windows SmartScreen may show *Unknown publisher*.
+Verify the download with the SHA-256 published next to it before running:
+
+```powershell
+Get-FileHash .\Kodra_1.0.0_x64-setup.exe -Algorithm SHA256
+```
+
+Upgrades are manual for now: the built-in updater checks a feed you configure and verifies the
+installer's SHA-256 before offering **Install** (see [`docs/updater.md`](docs/updater.md)).
+
+Kodra keeps settings in `%APPDATA%\app.kodra.desktop`. On first launch after the rename it copies
+settings, checkpoints and extensions from the old `dev.kudo.desktop` folder without deleting the old
+data.
 
 ## Features
 
@@ -16,20 +41,20 @@ public screenshots and the UI is written from scratch.
 | Source control | Git status, stage/unstage, commit, branch switch, history, diff preview, and worktrees (list, create on a new branch, open, remove, prune stale) |
 | Agent | Streaming chat with OpenAI-compatible and Anthropic providers, tool calling (`list_dir`, `read_file`, `write_file`, `search_files`, `grep`, `run_command`, `read_skill`), inline approval cards, cancellation |
 | Checkpoints | Every agent file write snapshots the previous contents first; chat replies show a Restore card with the touched files and the Agent pane lists recent changes |
-| Skills | Discovers `SKILL.md` bundles in `.kudo/skills`, `.claude/skills` and the user config dir; catalog injected into the agent prompt |
+| Skills | Discovers `SKILL.md` bundles in `.kodra/skills`, `.claude/skills` and the user config dir; catalog injected into the agent prompt |
 | Database | SQLite browser (tables, schema, paging), SQL console with history, CSV export via native save dialog |
 | Browser | In-app preview overlay with address bar, remembered last URL, self-origin guard, request inspector run in Rust (no CORS), open in system browser |
 | MCP | stdio JSON-RPC client, server presets, connect/disconnect, tool list and a tool runner |
 | LSP | Language servers on PATH (rust-analyzer, gopls, Dart, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion with auto-import edits, hover docs, go-to-definition (`F12`/`Ctrl+click`), signature help and occurrence highlighting at the cursor, semantic tokens and inline type/parameter hints, call hierarchy (`Shift+Alt+H`) and type hierarchy, rename (`F2`), references (`Shift+F12`), document symbols (`Ctrl+Shift+O`), workspace symbols (`Ctrl+T`), quick fixes (`Ctrl+.`), diagnostics as squiggles plus a Problems panel and status-bar counts |
 | Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |
 | Tests | Test explorer for Go, Rust, Python and Node: auto-detection, framework groups, per-test status, run all/file/test, streamed output with command header, cancel, and gutter markers that run a test on click |
-| Tasks | Build/run task runner: `.kudo/tasks.json`, `package.json` scripts (nested, package-manager aware) and `Makefile` targets, default build task plus `Ctrl+Alt+B`, streamed output in the bottom panel, stop, per-row status |
+| Tasks | Build/run task runner: `.kodra/tasks.json`, `package.json` scripts (nested, package-manager aware) and `Makefile` targets, default build task plus `Ctrl+Alt+B`, streamed output in the bottom panel, stop, per-row status |
 | Formatting | Prettier, gofmt, rustfmt and Black format the buffer before it is written (`Format on save`), format on demand (`Shift+Alt+F`), and a workspace-local install wins over `PATH`; languages without an external formatter fall back to the language server; ESLint and Ruff lint after saving into the Problems panel |
 | Docker | Containers/images tabs, start/stop/restart, logs, run image |
 | Network | Live request log (AI calls, browser fetches, update checks) in the bottom panel |
-| Updater | Feed check, download to temp, launch installer, reveal in Explorer (see `docs/updater.md`) |
+| Updater | Feed check over HTTPS, SHA-256-verified download to temp, installer confined to the update folder, launch installer, reveal in Explorer (see `docs/updater.md`) |
 | Extensions | Declarative extension folders (`extension.json`) contribute colour themes and snippets; install from a folder, enable/disable, remove |
-| Themes | Six built-in palettes (Kudo Dark/Light, Midnight, Graphite, Sand, Violet) plus extension themes; a theme restyles the shell, the editor syntax palette and the terminal |
+| Themes | Six built-in palettes (Kodra Dark/Light, Midnight, Graphite, Sand, Violet) plus extension themes; a theme restyles the shell, the editor syntax palette and the terminal |
 | Shell | Theme picker with live preview, accent colours, font size, tab size, word wrap, session restore, command palette, keybindings |
 
 ## Stack
@@ -40,17 +65,24 @@ public screenshots and the UI is written from scratch.
 
 ## Getting started
 
+Prerequisites: Node.js 22+, pnpm 9, Rust stable with the MSVC toolchain, and Visual Studio Build
+Tools with the C++ workload and Windows SDK.
+
 ```bash
 pnpm install
 pnpm dev          # browser-only preview; backend calls are mocked (app/lib/mock.ts)
 pnpm desktop      # real Tauri window with the Rust backend
+pnpm typecheck    # vue-tsc over the frontend
+pnpm test:rust    # Rust unit tests (updater, migration)
 pnpm build        # static frontend build -> .output/public
 pnpm desktop:build # production installer (NSIS)
-pnpm exec vue-tsc --noEmit -p tsconfig.json   # typecheck (excludes src-tauri build output)
+pnpm release:win  # build + hash + update manifest in release/
+pnpm icons        # regenerate the icon set from scripts/make-icons.ps1
 ```
 
 A step-by-step setup and run guide (in Indonesian, covering prerequisites, toolchains and
-troubleshooting) lives in [`docs/running.md`](docs/running.md).
+troubleshooting) lives in [`docs/running.md`](docs/running.md). The release checklist, code-signing
+variables and update-feed hosting are in [`docs/releasing.md`](docs/releasing.md).
 
 Language servers are discovered from `PATH`; install the one for your language
 (for example `rustup component add rust-analyzer`, or
@@ -64,8 +96,8 @@ Debug adapters are discovered the same way. Install Delve with
 `pnpm dev` runs entirely in the browser: `app/lib/mock.ts` provides a virtual workspace and canned
 responses for every backend command, so the UI can be developed without the Tauri shell.
 
-Settings are stored as JSON in the Tauri config directory (`Settings → About → Config directory`).
-Chat history is kept in `localStorage` per workspace.
+Settings are stored as JSON in the Tauri config directory (`Settings → About → Config directory`;
+`%APPDATA%\app.kodra.desktop` on Windows). Chat history is kept in `localStorage` per workspace.
 
 ## Project layout
 
@@ -94,7 +126,7 @@ registered in `src-tauri/src/lib.rs`.
 - Backend file tools resolve every path through `util::resolve_in_workspace`, which rejects `..`
   traversal and symlinks that escape the workspace.
 - `run_command` is sandboxed to the workspace directory, uses a 120 s timeout and is killed when
-  Kudo exits.
+  Kodra exits.
 - Before an agent write, `checkpoint_snapshot` copies the file into
   `<app config>/checkpoints/<workspace>/<id>/` (outside the project, so it never shows up in git).
   Files that did not exist yet are recorded as absent. **Restore** in the chat card or the Agent
@@ -134,7 +166,7 @@ default for Go (`dlv dap`), with CodeLLDB, `lldb-dap` and a **custom** adapter (
 anything else. Adapters are detected on `PATH`; the pane shows the detected path and lets you point
 at a different command. Program, arguments, working directory, stop-on-entry and launch/attach are
 saved per workspace in `localStorage`. **Attach** reads the process id from the Program field — Delve
-gets `{ mode: "local", processId }`, the native adapters get `{ pid }` — and Kudo refuses a
+gets `{ mode: "local", processId }`, the native adapters get `{ pid }` — and Kodra refuses a
 non-numeric PID before creating a session. Stopping an attach session asks the adapter to detach
 instead of terminating the target; adapters still decide the outcome (Delve on Windows ends the
 process it is attached to).
@@ -186,10 +218,10 @@ stops any run in flight.
 
 ## Tasks
 
-The **Tasks** view collects everything Kudo can build or run in the open workspace from three
+The **Tasks** view collects everything Kodra can build or run in the open workspace from three
 sources, grouped in that order:
 
-- **`.kudo/tasks.json`** — a declarative manifest: `{ "tasks": [{ "label": "Build", "command": "go build ./...", "cwd": "cmd/api", "group": "build", "isDefault": true }] }`.
+- **`.kodra/tasks.json`** — a declarative manifest: `{ "tasks": [{ "label": "Build", "command": "go build ./...", "cwd": "cmd/api", "group": "build", "isDefault": true }] }`.
   Labels are free text; `group` is `build`, `test` or omitted.
 - **`package.json` scripts** — every script of the root manifest and of nested manifests up to four
   folders deep (dependencies and build output are skipped). Nested scripts are labelled
@@ -219,7 +251,7 @@ pane says so before you press play.
 
 ## Formatting and linting
 
-Kudo runs the formatters and linters you already have, without bundling any:
+Kodra runs the formatters and linters you already have, without bundling any:
 
 | Tool | Kind | Languages | Install |
 | --- | --- | --- | --- |
@@ -232,7 +264,7 @@ Kudo runs the formatters and linters you already have, without bundling any:
 
 A workspace-local install wins: `node_modules/prettier/bin/prettier.cjs` (or
 `bin-prettier.js`) and `node_modules/eslint/bin/eslint.js` are spawned through Node, so the version
-pinned by the project is the one that runs. Otherwise Kudo falls back to `PATH`, and Python
+pinned by the project is the one that runs. Otherwise Kodra falls back to `PATH`, and Python
 formatters are also found through `python -m` when the module is installed but the script is not.
 `Settings → Editor` lists every tool with `workspace` or `path` scope and shows the install command
 for the ones that are missing.
@@ -243,7 +275,7 @@ for the ones that are missing.
   `Saved x.go · formatted with gofmt`.
 - **Format Document** (`Shift+Alt+F`) formats the active buffer without saving it, so you can review
   the diff and undo it.
-- **Language-server fallback** — when none of the tools above covers the language, Kudo sends
+- **Language-server fallback** — when none of the tools above covers the language, Kodra sends
   `textDocument/formatting` to the running language server (Dart uses this path) and applies the
   returned edits. The toast names the server, e.g. `Formatted with dart language server`.
 - **Lint on save** runs ESLint or Ruff on the saved text and merges the result into the **Problems**
@@ -261,7 +293,7 @@ at.
 
 ## Code intelligence
 
-Kudo starts a language server per language (see the feature table) and speaks the standard
+Kodra starts a language server per language (see the feature table) and speaks the standard
 Language Server Protocol for the code-aware features:
 
 - **Rename Symbol** (`F2`) asks `textDocument/prepareRename` for the range and suggested name, shows
@@ -274,7 +306,7 @@ Language Server Protocol for the code-aware features:
   hierarchical and flat response shapes) into a filterable outline with nesting depth.
 - **Quick Fix / Code Actions** (`Ctrl+.`) sends the diagnostics that cover the cursor with
   `textDocument/codeAction`, resolves actions through `codeAction/resolve` when needed, then applies
-  the edit or runs `workspace/executeCommand`. Servers may also push `workspace/applyEdit`; Kudo
+  the edit or runs `workspace/executeCommand`. Servers may also push `workspace/applyEdit`; Kodra
   applies that edit and answers the request so the server never blocks.
 - **Semantic tokens** — `textDocument/semanticTokens/full` refines the syntax highlighting with the
   server's token legend, so class names, methods, parameters, properties and type parameters get the
@@ -300,7 +332,7 @@ they are counted as skipped instead. Navigating to a definition or reference may
 file outside the workspace (such as the Dart/Flutter SDK); writes and agent tools remain restricted
 to the workspace.
 
-Dart files use `dart language-server` (LSP by default). When Flutter is installed, Kudo resolves the
+Dart files use `dart language-server` (LSP by default). When Flutter is installed, Kodra resolves the
 Dart SDK bundled with it (`<flutter>/bin/cache/dart-sdk`) so a Flutter project is analysed with the
 same SDK version that `flutter` uses; otherwise it falls back to `dart` on `PATH`. `.dart` files are
 highlighted with the Dart legacy mode, and other Flutter-adjacent files (`.kt`, `.java`, `.swift`,
@@ -325,7 +357,7 @@ Source Control → Worktrees lists every `git worktree` of the open repository. 
 a branch and a folder outside the workspace: existing branches are checked out, new ones start at
 the current HEAD. **Open** switches the workspace to that folder, **Remove** deletes the worktree
 (keeping the branch; folders with uncommitted changes need a forced removal), and **Prune stale**
-cleans up entries whose folder was deleted outside Kudo.
+cleans up entries whose folder was deleted outside Kodra.
 
 ## Extensions and themes
 
@@ -373,18 +405,44 @@ copy. See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Development notes
 
-- In dev builds `window.__kudoCall(command, args)` exposes the IPC bridge so the real backend can be
+- In dev builds `window.__kodraCall(command, args)` exposes the IPC bridge so the real backend can be
   scripted over the WebView2 DevTools protocol. Start the app with remote debugging enabled
   (`$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS='--remote-debugging-port=9223'; pnpm desktop`) and
-  connect to `http://127.0.0.1:9223`. `window.__kudoOpenFolder(path)` runs the normal folder-switch
+  connect to `http://127.0.0.1:9223`. `window.__kodraOpenFolder(path)` runs the normal folder-switch
   path (used by the terminal teardown test, since the native picker cannot be scripted).
 - The updater's installer step is the only action that executes a downloaded binary; it always
   requires a manual click on **Install**.
+
+## Project status
+
+Kodra 1.0 targets **Windows x64**. The feature set is frozen until 1.0 ships; after that, releases
+focus on bug fixes, security and polish. macOS and Linux builds are not shipped and untested.
+
+## Verifying a release
+
+Every release ships a `checksums.txt` and a `latest.json` containing the installer's SHA-256.
+
+```powershell
+Get-FileHash .\Kodra_1.0.0_x64-setup.exe -Algorithm SHA256
+Get-AuthenticodeSignature .\Kodra_1.0.0_x64-setup.exe   # Valid once signing is configured
+```
+
+Until a code-signing certificate is configured the installer is unsigned, so SmartScreen warnings
+are expected. The update path still requires a matching SHA-256 before anything is written to disk.
 
 ## Changelog
 
 Release notes live in [CHANGELOG.md](CHANGELOG.md).
 
+## Security and privacy
+
+Kodra has no telemetry. It only reaches the network for features you use (AI provider, update check,
+MCP servers, browser preview, git remotes). See [PRIVACY.md](PRIVACY.md) for what is stored locally
+and what leaves the machine, and [SECURITY.md](SECURITY.md) for the threat model and how to report a
+vulnerability privately.
+
 ## License
 
-Private project — not published.
+Kodra is proprietary software, free to download and use. Copyright © 2026 Kodra contributors, all
+rights reserved. Redistribution and modification are not permitted. See [LICENSE](LICENSE) and
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

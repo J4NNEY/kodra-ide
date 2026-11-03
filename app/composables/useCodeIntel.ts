@@ -56,13 +56,13 @@ interface CursorTarget {
 export function useCodeIntel() {
   const ide = useIde()
   const lsp = useLsp()
-  const cursor = useState('kudo:cursor', () => ({ line: 1, column: 1, selected: 0 }))
+  const cursor = useState('kodra:cursor', () => ({ line: 1, column: 1, selected: 0 }))
 
-  const rename = useState<RenameState | null>('kudo:codeintel-rename', () => null)
-  const list = useState<CodeIntelListState | null>('kudo:codeintel-list', () => null)
-  const actions = useState<CodeActionState | null>('kudo:codeintel-actions', () => null)
+  const rename = useState<RenameState | null>('kodra:codeintel-rename', () => null)
+  const list = useState<CodeIntelListState | null>('kodra:codeintel-list', () => null)
+  const actions = useState<CodeActionState | null>('kodra:codeintel-actions', () => null)
   /** Guards workspace-symbol answers against slower earlier requests. */
-  const workspaceSeq = useState<number>('kudo:codeintel-ws-seq', () => 0)
+  const workspaceSeq = useState<number>('kodra:codeintel-ws-seq', () => 0)
 
   const anyOpen = computed(() => !!rename.value || !!list.value || !!actions.value)
 

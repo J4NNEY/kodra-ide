@@ -44,24 +44,24 @@ interface StoredSession {
 }
 
 export function useIde() {
-  const workspace = useState<WorkspaceInfo | null>('kudo:workspace', () => null)
-  const settings = useState<Settings>('kudo:settings', () => structuredClone(defaultSettings))
-  const tabs = useState<EditorTab[]>('kudo:tabs', () => [])
-  const groups = useState<EditorGroup[]>('kudo:editor-groups', () => freshGroups())
-  const activeGroupId = useState<EditorGroupId>('kudo:editor-active-group', () => 'main')
-  const sidebarView = useState<SidebarView>('kudo:sidebar-view', () => 'explorer')
-  const sidebarVisible = useState<boolean>('kudo:sidebar-visible', () => true)
-  const chatOpen = useState<boolean>('kudo:chat-open', () => true)
-  const panelVisible = useState<boolean>('kudo:panel-visible', () => true)
+  const workspace = useState<WorkspaceInfo | null>('kodra:workspace', () => null)
+  const settings = useState<Settings>('kodra:settings', () => structuredClone(defaultSettings))
+  const tabs = useState<EditorTab[]>('kodra:tabs', () => [])
+  const groups = useState<EditorGroup[]>('kodra:editor-groups', () => freshGroups())
+  const activeGroupId = useState<EditorGroupId>('kodra:editor-active-group', () => 'main')
+  const sidebarView = useState<SidebarView>('kodra:sidebar-view', () => 'explorer')
+  const sidebarVisible = useState<boolean>('kodra:sidebar-visible', () => true)
+  const chatOpen = useState<boolean>('kodra:chat-open', () => true)
+  const panelVisible = useState<boolean>('kodra:panel-visible', () => true)
   const panelTab = useState<'terminal' | 'problems' | 'output' | 'network' | 'tests' | 'tasks'>(
-    'kudo:panel-tab',
+    'kodra:panel-tab',
     () => 'terminal'
   )
-  const settingsOpen = useState<boolean>('kudo:settings-open', () => false)
-  const palette = useState<PaletteState>('kudo:palette', () => ({ mode: 'none' }))
-  const toasts = useState<Toast[]>('kudo:toasts', () => [])
-  const ready = useState<boolean>('kudo:ready', () => false)
-  const loadingFile = useState<boolean>('kudo:loading-file', () => false)
+  const settingsOpen = useState<boolean>('kodra:settings-open', () => false)
+  const palette = useState<PaletteState>('kodra:palette', () => ({ mode: 'none' }))
+  const toasts = useState<Toast[]>('kodra:toasts', () => [])
+  const ready = useState<boolean>('kodra:ready', () => false)
+  const loadingFile = useState<boolean>('kodra:loading-file', () => false)
 
   const splitOpen = computed(() => groups.value.length > 1)
   const activeGroup = computed(
@@ -143,7 +143,7 @@ export function useIde() {
         ai: { ...defaultSettings.ai, ...loaded.ai }
       }
     } catch (err) {
-      console.warn('[kudo] settings unavailable', err)
+      console.warn('[kodra] settings unavailable', err)
     }
     applyTheme()
 
@@ -156,7 +156,7 @@ export function useIde() {
 
     if (settings.value.restoreSession) {
       try {
-        const raw = localStorage.getItem('kudo:session')
+        const raw = localStorage.getItem('kodra:session')
         if (raw) {
           const session = JSON.parse(raw) as StoredSession
           const wanted = [
@@ -225,7 +225,7 @@ export function useIde() {
   function persistSession() {
     if (typeof localStorage === 'undefined') return
     localStorage.setItem(
-      'kudo:session',
+      'kodra:session',
       JSON.stringify({
         tabs: tabs.value.map((t) => t.path),
         active: activePath.value,
@@ -309,7 +309,7 @@ export function useIde() {
   }
 
   const pendingLine = useState<{ path: string; line: number } | null>(
-    'kudo:pending-line',
+    'kodra:pending-line',
     () => null
   )
 
