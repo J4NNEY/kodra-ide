@@ -280,6 +280,7 @@ mengekspos `window.__kodraOpenFolder(path)` untuk membuka workspace tanpa dialog
 | Jendela putih di build release | `.output/public` kosong / rusak | jalankan `pnpm build` lalu `pnpm desktop:build` |
 | WebView2 tidak ditemukan | runtime belum terpasang | install Microsoft Edge WebView2 Evergreen Runtime |
 | HMR error setelah ganti versi | cache Nuxt basi | hapus `.nuxt` dan `.output`, jalankan ulang |
+| `Cannot find module ...node_modules\...` setelah folder project dipindah atau di-rename | pnpm membuat junction/jembatan absolut di `node_modules` yang masih menunjuk path lama | jalankan `pnpm install --force` (atau hapus `node_modules` lalu `pnpm install`) |
 | Banyak warning `chunk larger than 500 kB` | bundle editor besar | normal, bukan kegagalan build |
 | `process didn't exit successfully` saat tutup jendela | perilaku `tauri dev` | normal |
 
