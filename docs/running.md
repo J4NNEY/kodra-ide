@@ -305,8 +305,28 @@ pnpm install
    `Saved x.go - formatted with gofmt`.
 8. Buka file Dart: tipe hasil inferensi tampil inline (inlay hints), warna token dari server
    mengikuti tema, dan `Shift+Alt+H` di atas sebuah method menampilkan daftar pemanggilnya.
+9. `Ctrl+Shift+M` membuka canvas; tambahkan satu note, tutup, lalu buka lagi - isinya masih ada.
 
-## 12. Shortcut penting
+## 12. Canvas (papan tulis)
+
+Canvas adalah overlay layar penuh untuk mencatat bebas: sticky note, bentuk, teks, coretan tangan,
+dan konektor. Buka lewat ikon pena di activity bar, menu **View → Canvas**, command palette
+(`View: Canvas`), atau `Ctrl+Shift+M`. `Esc` menutup overlay (tekan sekali lagi jika sebuah tool
+sedang aktif).
+
+- Isi papan disimpan otomatis per workspace di `localStorage`, bukan sebagai file di folder project,
+  jadi ikut hilang bila data WebView dibersihkan.
+- Tool dan shortcut: `V` select, `N` note, `R` rectangle, `O` ellipse, `D` diamond, `T` teks,
+  `A` connector, `P` pena.
+- Geser kanvas dengan `Space` + drag atau drag tombol tengah; zoom dengan `Ctrl` + scroll,
+  `Ctrl+=` / `Ctrl+-`; `Ctrl+0` kembali 100%, `Shift+1` fit ke isi.
+- Konektor ikut menempel ke bentuk saat ujungnya dilepas di atas bentuk (garis tetap menempel walau
+  bentuknya digeser).
+- `Ctrl+Z` / `Ctrl+Shift+Z` undo/redo, `Ctrl+D` duplikat, `Ctrl+A` pilih semua, `Delete` hapus,
+  tombol panah menggeser 1 px (`Shift` + panah: 10 px). Tombol **Download** di header mengekspor
+  papan sebagai PNG.
+
+## 13. Shortcut penting
 
 | Shortcut | Fungsi |
 | --- | --- |
@@ -318,6 +338,7 @@ pnpm install
 | `Ctrl+Shift+G` | Source Control |
 | `Ctrl+Shift+D` / `Ctrl+Shift+B` | Debugger / Tasks |
 | `Ctrl+\`` | terminal |
+| `Ctrl+Shift+M` | canvas / papan tulis |
 | `Ctrl+\` | split editor |
 | `Ctrl+,` | Settings |
 | `F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5` | debug: start, breakpoint, step over, step in, step out, stop |

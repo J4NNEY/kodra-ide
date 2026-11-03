@@ -58,6 +58,7 @@ data.
 | Skills | Discovers `SKILL.md` bundles in `.kodra/skills`, `.claude/skills` and the user config dir; catalog injected into the agent prompt |
 | Database | SQLite browser (tables, schema, paging), SQL console with history, CSV export via native save dialog |
 | Browser | In-app preview overlay with address bar, remembered last URL, self-origin guard, request inspector run in Rust (no CORS), open in system browser |
+| Canvas | Full-screen whiteboard overlay (`Ctrl+Shift+M`): sticky notes, rectangles, ellipses, diamonds, text, freehand pen and connectors that stay attached to the shapes they link; pan/zoom, multi-select with resize handles, undo/redo, per-workspace autosave and PNG export |
 | MCP | stdio JSON-RPC client, server presets, connect/disconnect, tool list and a tool runner |
 | LSP | Language servers on PATH (rust-analyzer, gopls, Dart, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion with auto-import edits, hover docs, go-to-definition (`F12`/`Ctrl+click`), signature help and occurrence highlighting at the cursor, semantic tokens and inline type/parameter hints, call hierarchy (`Shift+Alt+H`) and type hierarchy, rename (`F2`), references (`Shift+F12`), document symbols (`Ctrl+Shift+O`), workspace symbols (`Ctrl+T`), quick fixes (`Ctrl+.`), diagnostics as squiggles plus a Problems panel and status-bar counts |
 | Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |
@@ -111,7 +112,8 @@ Debug adapters are discovered the same way. Install Delve with
 responses for every backend command, so the UI can be developed without the Tauri shell.
 
 Settings are stored as JSON in the Tauri config directory (`Settings → About → Config directory`;
-`%APPDATA%\app.kodra.desktop` on Windows). Chat history is kept in `localStorage` per workspace.
+`%APPDATA%\app.kodra.desktop` on Windows). Chat history and canvas boards are kept in
+`localStorage` per workspace.
 
 ## Project layout
 

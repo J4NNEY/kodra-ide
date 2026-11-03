@@ -19,6 +19,8 @@ const SymbolList = defineAsyncComponent(() => import('./components/SymbolList.vu
 const CodeActionMenu = defineAsyncComponent(() => import('./components/CodeActionMenu.vue'))
 const SettingsDialog = defineAsyncComponent(() => import('./components/SettingsDialog.vue'))
 const BrowserOverlay = defineAsyncComponent(() => import('./components/BrowserOverlay.vue'))
+const BoardOverlay = defineAsyncComponent(() => import('./components/BoardOverlay.vue'))
+const board = useBoard()
 const sidebarWidth = useLayoutSize('sidebar-width', 268, 200, 520)
 const chatWidth = useLayoutSize('chat-width', 384, 300, 720)
 const booting = ref(true)
@@ -131,6 +133,7 @@ useHead({ title: () => (ide.workspace.value ? `${ide.workspace.value.name} — K
   <CodeActionMenu />
   <SettingsDialog />
   <BrowserOverlay />
+  <BoardOverlay v-if="board.open.value" />
   <ToastHost />
 
   <div v-if="booting" class="boot-splash">

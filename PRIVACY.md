@@ -11,6 +11,7 @@ maintainers do not receive any data about you or your projects.
 | Agent checkpoints (file snapshots) | `%APPDATA%\app.kodra.desktop\checkpoints\` |
 | Installed extensions | `%APPDATA%\app.kodra.desktop\extensions\` |
 | Chat history, session restore, layout, recent workspaces | WebView `localStorage` for the app |
+| Canvas boards (one per workspace) | WebView `localStorage` for the app |
 
 Deleting these folders removes the data. Uninstalling Kodra leaves them in place so a reinstall keeps
 your setup.

@@ -19,6 +19,7 @@ export function useCommands() {
   const chat = useChat()
   const epoch = useTerminalEpoch()
   const browser = useBrowser()
+  const board = useBoard()
   const database = useDatabase()
   const debug = useDebug()
   const tests = useTests()
@@ -137,6 +138,13 @@ export function useCommands() {
       label: 'View: Extensions',
       group: 'View',
       run: () => (ide.sidebarView.value = 'extensions', (ide.sidebarVisible.value = true))
+    },
+    {
+      id: 'view.canvas',
+      label: 'View: Canvas',
+      group: 'View',
+      hint: 'Ctrl+Shift+M',
+      run: () => board.show()
     },
     {
       id: 'browser.open',

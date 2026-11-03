@@ -6,6 +6,7 @@ export function useKeybindings() {
   const ide = useIde()
   const epoch = useTerminalEpoch()
   const browser = useBrowser()
+  const board = useBoard()
   const database = useDatabase()
   const debug = useDebug()
   const tests = useTests()
@@ -29,6 +30,10 @@ export function useKeybindings() {
   }
 
   function closeOverlays() {
+    if (board.open.value) {
+      board.hide()
+      return true
+    }
     if (browser.open.value) {
       browser.hide()
       return true
@@ -50,6 +55,9 @@ export function useKeybindings() {
   }
 
   function onKeydown(event: KeyboardEvent) {
+    // The whiteboard owns the keyboard while it is on screen.
+    if (board.open.value) return
+
     if (event.key === 'Escape') {
       closeOverlays()
       return
@@ -132,6 +140,12 @@ export function useKeybindings() {
         if (ide.activePath.value) ide.closeTab(ide.activePath.value, ide.activeGroupId.value)
         return
       }
+    }
+
+    if (shift && key === 'm') {
+      event.preventDefault()
+      board.show()
+      return
     }
 
     if (key === '.' || code === 'Period') {

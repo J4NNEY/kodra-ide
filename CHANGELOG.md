@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+A whiteboard for quick thinking that does not belong in a file tree.
+
+- **Canvas** — a full-screen board (`Ctrl+Shift+M`, the pen icon in the activity bar or
+  **View → Canvas**) for sticky notes, rectangles, ellipses, diamonds, text, freehand drawing and
+  connectors. It is built on SVG and pointer events, so it adds no dependency and follows the
+  current theme in both light and dark.
+- **Boards keep their connections** — a connector dropped on a shape binds to it, so it keeps
+  touching the border while either shape moves. Selecting a shape exposes resize handles; arrows
+  expose draggable endpoints.
+- **Working like an editor** — pan (`Space`/middle-drag), zoom (`Ctrl`+wheel, `Ctrl+=`, `Ctrl+-`,
+  `Ctrl+0`) and fit-to-content (`Shift+1`), multi-select with a marquee, undo/redo, duplicate,
+  nudge with arrow keys, and PNG export.
+- **Saved per workspace** — boards live in `localStorage` keyed by workspace and are restored when
+  the overlay reopens, so nothing is written into the project unless you export it.
+
 ## 1.0.1 — 2026-11-03
 
 A visual refresh of the whole shell. No features changed; this is the 1.0.0

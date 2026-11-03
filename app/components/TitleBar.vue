@@ -4,6 +4,7 @@ import { isTauri } from '../lib/api'
 
 const ide = useIde()
 const chat = useChat()
+const board = useBoard()
 const menu = ref<string | null>(null)
 
 interface MenuItem {
@@ -28,6 +29,7 @@ const menus: { label: string; items: MenuItem[] }[] = [
       { label: 'Toggle Sidebar', hint: 'Ctrl+B', run: () => ide.toggleSidebar() },
       { label: 'Toggle Terminal', hint: 'Ctrl+`', run: () => ide.togglePanel('terminal') },
       { label: 'Toggle Agent', hint: 'Ctrl+Shift+A', run: () => ide.toggleChat() },
+      { label: 'Canvas', hint: 'Ctrl+Shift+M', run: () => board.show() },
       { label: 'Command Palette', hint: 'Ctrl+Shift+P', run: () => (ide.palette.value = { mode: 'commands' }) }
     ]
   },
