@@ -30,13 +30,13 @@ jobs:
       KODRA_TIMESTAMP_URL: ${{ secrets.KODRA_TIMESTAMP_URL }}
       KODRA_UPDATE_BASE_URL: ${{ vars.KODRA_UPDATE_BASE_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -81,7 +81,7 @@ jobs:
           pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -UpdateBaseUrl $base
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kodra-${{ env.KODRA_VERSION }}-windows-x64
           path: release/*
