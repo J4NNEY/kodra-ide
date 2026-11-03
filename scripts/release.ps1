@@ -57,6 +57,34 @@ try {
     if ($pkg.version -ne $version -or $cargoVersion -ne $version) {
         throw "Version mismatch: tauri.conf.json=$version package.json=$($pkg.version) Cargo.toml=$cargoVersion"
     }
+
+    # A dev server on the same checkout shares `.nuxt` and `.output` with the
+    # build. The two processes delete each other's `.nuxt/dist`, and the result
+    # is an index.html that points at the dev server (`/@vite/client`, absolute
+    # source paths) which then loads nothing in the packaged app. Building with
+    # NUXT_IGNORE_LOCK only silences the warning, so refuse to start instead.
+    $devUrl = ''
+    if ($conf.build -and $conf.build.devUrl) { $devUrl = [string]$conf.build.devUrl }
+    $portMatch = [regex]::Match($devUrl, ':(\d+)')
+    $devPort = if ($portMatch.Success) { [int]$portMatch.Groups[1].Value } else { 3000 }
+    $devServerUp = $false
+    try {
+        $devServerUp = [bool](Get-NetTCPConnection -LocalPort $devPort -State Listen -ErrorAction Stop)
+    }
+    catch {
+        # No NetTCPIP module (or no listeners): fall back to a plain connect.
+        $devServerUp = $false
+        $client = New-Object System.Net.Sockets.TcpClient
+        try {
+            $async = $client.BeginConnect('127.0.0.1', $devPort, $null, $null)
+            $devServerUp = $async.AsyncWaitHandle.WaitOne(300) -and $client.Connected
+        }
+        catch { $devServerUp = $false }
+        finally { $client.Dispose() }
+    }
+    if ($devServerUp) {
+        throw "Something is already listening on port $devPort. Stop the dev server before packaging: a running 'pnpm dev' shares .nuxt with the build and produces a broken frontend bundle."
+    }
     if (-not $UpdateBaseUrl) {
         # GitHub Releases hosts the installer for the tag that matches this build.
         $UpdateBaseUrl = "https://github.com/J4NNEY/kodra-ide/releases/download/v$version"

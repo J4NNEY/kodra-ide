@@ -272,7 +272,7 @@ mengekspos `window.__kodraOpenFolder(path)` untuk membuka workspace tanpa dialog
 
 | Gejala | Penyebab | Solusi |
 | --- | --- | --- |
-| `Another Nuxt dev server is already running (PID x)` | `pnpm dev`/`pnpm desktop` lain masih hidup | `taskkill /PID x /F`, atau `NUXT_IGNORE_LOCK=1` |
+| `Another Nuxt dev server is already running (PID x)` | `pnpm dev`/`pnpm desktop` lain masih hidup | `taskkill /PID x /F`, lalu jalankan ulang. **Jangan** pakai `NUXT_IGNORE_LOCK=1`: dua proses Nuxt berbagi `.nuxt` dan saling menghapus `.nuxt/dist`, sehingga `index.html` hasil build menunjuk ke dev server dan aplikasi hasil packaging tampil kosong |
 | `pnpm desktop:build` gagal di `beforeBuildCommand` | dev server masih memakai `.nuxt` | hentikan dev server dulu, lalu build ulang |
 | Port 3000 dipakai aplikasi lain | port default | hentikan prosesnya, atau ubah `pnpm dev` + `devUrl` di `src-tauri/tauri.conf.json` |
 | Error `#app-manifest` saat boot dev | Vite memproses import SSR-only sebelum virtual module Nuxt siap (hanya pada boot pertama saat `.nuxt` masih dingin) | Tidak berbahaya. Sudah dimatikan lewat `experimental.appManifest: false`; kalau muncul lagi, hapus `.nuxt` lalu jalankan ulang |
