@@ -273,54 +273,54 @@ watch(
 <template>
   <section class="bottom-panel" :class="{ hidden: !ide.panelVisible.value }">
     <div class="panel-head">
-      <button
-        class="panel-tab"
-        :class="{ active: ide.panelTab.value === 'terminal' }"
-        @click="ide.panelTab.value = 'terminal'"
-      >
-        <SquareTerminal :size="13" /> Terminal
-      </button>
-      <button
-        class="panel-tab"
-        :class="{ active: ide.panelTab.value === 'problems' }"
-        @click="ide.panelTab.value = 'problems'"
-      >
-        Problems <span class="tab-count">{{ lsp.allDiagnostics.value.length + format.lintDiagnostics.value.length }}</span>
-      </button>
-      <button
-        class="panel-tab"
-        :class="{ active: ide.panelTab.value === 'output' }"
-        @click="ide.panelTab.value = 'output'"
-      >
-        Output
-      </button>
-      <button
-        class="panel-tab panel-tab-tests"
-        :class="{ active: ide.panelTab.value === 'tests' }"
-        @click="ide.panelTab.value = 'tests'"
-      >
-        Tests
-        <span v-if="tests.active.value" class="dot-live" />
-      </button>
-      <button
-        class="panel-tab panel-tab-tasks"
-        :class="{ active: ide.panelTab.value === 'tasks' }"
-        @click="ide.panelTab.value = 'tasks'"
-      >
-        Tasks
-        <span v-if="tasks.active.value" class="dot-live" />
-      </button>
-      <button
-        class="panel-tab"
-        :class="{ active: ide.panelTab.value === 'network' }"
-        @click="ide.panelTab.value = 'network'"
-      >
-        Network
-      </button>
+      <div class="panel-tabs">
+        <button
+          class="panel-tab"
+          :class="{ active: ide.panelTab.value === 'terminal' }"
+          @click="ide.panelTab.value = 'terminal'"
+        >
+          <SquareTerminal :size="13" /> Terminal
+        </button>
+        <button
+          class="panel-tab"
+          :class="{ active: ide.panelTab.value === 'problems' }"
+          @click="ide.panelTab.value = 'problems'"
+        >
+          Problems <span class="tab-count">{{ lsp.allDiagnostics.value.length + format.lintDiagnostics.value.length }}</span>
+        </button>
+        <button
+          class="panel-tab"
+          :class="{ active: ide.panelTab.value === 'output' }"
+          @click="ide.panelTab.value = 'output'"
+        >
+          Output
+        </button>
+        <button
+          class="panel-tab panel-tab-tests"
+          :class="{ active: ide.panelTab.value === 'tests' }"
+          @click="ide.panelTab.value = 'tests'"
+        >
+          Tests
+          <span v-if="tests.active.value" class="dot-live" />
+        </button>
+        <button
+          class="panel-tab panel-tab-tasks"
+          :class="{ active: ide.panelTab.value === 'tasks' }"
+          @click="ide.panelTab.value = 'tasks'"
+        >
+          Tasks
+          <span v-if="tasks.active.value" class="dot-live" />
+        </button>
+        <button
+          class="panel-tab"
+          :class="{ active: ide.panelTab.value === 'network' }"
+          @click="ide.panelTab.value = 'network'"
+        >
+          Network
+        </button>
+      </div>
 
-      <div style="flex: 1" />
-
-      <span v-if="activeSession?.status === 'running'" class="dot-live" style="margin-right: 6px" />
+      <span v-if="activeSession?.status === 'running'" class="dot-live" style="margin: 0 6px" />
       <div class="term-shell-wrap">
         <button class="icon-btn term-new" title="New terminal" @click="newSession()">
           <Plus :size="14" />

@@ -218,15 +218,15 @@ onMounted(load)
   cursor: pointer;
 }
 .ctx button:hover {
-  background: var(--glass-strong);
+  background: var(--fill-2);
   color: var(--text);
 }
 .ctx .danger {
-  color: #ff9b9e;
+  color: color-mix(in srgb, var(--red) 70%, var(--text));
 }
 .ctx .sep {
   height: 1px;
-  background: var(--border);
+  background: var(--hairline);
   margin: 4px 2px;
 }
 </style>

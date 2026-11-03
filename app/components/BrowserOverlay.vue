@@ -181,7 +181,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
     <div
       v-if="browser.open.value"
       class="browser-shell"
-      :style="{ '--tb': '38px' }"
+      :style="{ '--tb': 'var(--titlebar-h)' }"
     >
       <div class="browser-head">
         <div class="browser-title">
@@ -383,17 +383,22 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 <style scoped>
 .browser-shell {
   position: fixed;
-  inset: var(--tb) 0 0 0;
+  inset: calc(var(--tb) + 2 * var(--gutter)) var(--gutter) var(--gutter) var(--gutter);
   z-index: 240;
   display: flex;
   flex-direction: column;
-  background: var(--surface-0);
+  background: var(--layer-solid);
+  backdrop-filter: blur(26px) saturate(150%);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--rim-top), var(--shadow-pop);
+  overflow: hidden;
   animation: browser-in 0.16s ease-out;
 }
 @keyframes browser-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(6px) scale(0.995);
   }
 }
 .browser-head {
@@ -401,8 +406,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-1);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--fill-1);
 }
 .browser-title {
   display: flex;

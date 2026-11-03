@@ -205,12 +205,13 @@ function snippet(text: string) {
 .agent-mark {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
   background: var(--accent-soft);
-  color: var(--accent);
-  border: 1px solid #d4a73c33;
+  color: var(--accent-strong);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: inset 0 1px 0 #ffffff1f;
 }
 .col {
   display: flex;

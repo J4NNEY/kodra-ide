@@ -148,9 +148,11 @@ useHead({ title: () => (ide.workspace.value ? `${ide.workspace.value.name} — K
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: var(--canvas);
+  background: color-mix(in srgb, var(--canvas) 88%, transparent);
+  backdrop-filter: blur(18px);
   color: var(--text-faint);
   font-size: 12px;
+  letter-spacing: 0.01em;
   z-index: 500;
   animation: boot-fade 0.25s ease-out;
 }

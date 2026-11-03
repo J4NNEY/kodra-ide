@@ -686,14 +686,14 @@ watch(() => ide.workspace.value?.path, refreshAll)
   white-space: pre;
 }
 .diff .add {
-  color: #8fd6a5;
-  background: #1e3a2a55;
+  color: color-mix(in srgb, var(--green) 72%, var(--text));
+  background: color-mix(in srgb, var(--green) 14%, transparent);
   display: inline-block;
   width: 100%;
 }
 .diff .del {
-  color: #ef9a9d;
-  background: #3a1e2055;
+  color: color-mix(in srgb, var(--red) 72%, var(--text));
+  background: color-mix(in srgb, var(--red) 14%, transparent);
   display: inline-block;
   width: 100%;
 }

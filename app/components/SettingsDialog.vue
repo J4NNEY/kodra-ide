@@ -881,8 +881,8 @@ watch(
   flex-direction: column;
   gap: 2px;
   padding: 12px 8px;
-  border-right: 1px solid var(--border);
-  background: var(--surface-0);
+  border-right: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--canvas) 30%, transparent);
 }
 .settings-nav button {
   display: flex;
@@ -890,20 +890,22 @@ watch(
   gap: 9px;
   padding: 8px 10px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   font-size: 12px;
   cursor: pointer;
   text-align: left;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .settings-nav button:hover {
-  background: var(--glass);
+  background: var(--fill-2);
   color: var(--text-dim);
 }
 .settings-nav button.active {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-strong);
+  box-shadow: inset 0 1px 0 #ffffff1a;
 }
 .settings-pane {
   padding: 16px 18px 24px;
@@ -917,11 +919,11 @@ watch(
 }
 .segment {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   padding: 3px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: var(--fill-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
 }
 .segment button {
   flex: 1;
@@ -931,7 +933,7 @@ watch(
   justify-content: center;
   gap: 6px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--text-muted);
   font-size: 11.5px;
@@ -939,8 +941,9 @@ watch(
   cursor: pointer;
 }
 .segment button.active {
-  background: var(--glass-strong);
+  background: var(--fill-3);
   color: var(--text);
+  box-shadow: inset 0 1px 0 #ffffff1a;
 }
 .swatches {
   display: flex;
@@ -950,7 +953,7 @@ watch(
 .swatch {
   width: 26px;
   height: 26px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 2px solid transparent;
   display: grid;
   place-items: center;
@@ -959,7 +962,7 @@ watch(
   padding: 0;
 }
 .swatch.active {
-  border-color: var(--text);
+  border-color: color-mix(in srgb, var(--text) 60%, transparent);
 }
 .color-input {
   width: 26px;
@@ -1215,35 +1218,44 @@ watch(
   flex-direction: column;
   gap: 2px;
   padding: 7px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--fill-1);
   text-align: left;
   cursor: pointer;
-  transition: border-color 120ms ease, transform 120ms ease;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease),
+    transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 .theme-card:hover {
-  border-color: var(--border-strong);
+  border-color: var(--hairline-strong);
+  background: var(--fill-2);
   transform: translateY(-1px);
 }
 .theme-card.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 72%, transparent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--fill-1));
+  box-shadow: 0 0 0 3px var(--accent-soft), inset 0 1px 0 #ffffff1a;
 }
 .theme-preview {
   position: relative;
   display: block;
   height: 46px;
   margin-bottom: 4px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 .theme-preview.system {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0f0f0f 0%, #141414 49%, #f3f4f6 50%, #ffffff 100%);
+  background: linear-gradient(
+    135deg,
+    var(--surface-1) 0%,
+    var(--surface-2) 49%,
+    #f3f4f6 50%,
+    #ffffff 100%
+  );
   color: var(--text-muted);
 }
 .theme-preview-bar {

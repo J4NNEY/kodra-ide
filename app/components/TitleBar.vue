@@ -124,15 +124,24 @@ onMounted(() => {
 <style scoped>
 .menu-pop {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   left: 0;
-  min-width: 230px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: 9px;
+  min-width: 234px;
+  background-color: var(--layer-solid);
+  background-image: var(--sheen-soft);
+  backdrop-filter: blur(28px) saturate(165%);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
   padding: 5px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--rim-top), var(--shadow-pop);
   z-index: 60;
+  animation: menu-in 140ms var(--ease-out);
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
 }
 .menu-item {
   width: 100%;
@@ -142,7 +151,7 @@ onMounted(() => {
   gap: 18px;
   padding: 7px 9px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--text-dim);
   font-size: 12px;
@@ -150,7 +159,7 @@ onMounted(() => {
   text-align: left;
 }
 .menu-item:hover {
-  background: var(--glass-strong);
+  background: var(--fill-2);
   color: var(--text);
 }
 </style>
