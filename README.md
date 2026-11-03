@@ -25,7 +25,9 @@ Get-FileHash .\Kodra_1.0.0_x64-setup.exe -Algorithm SHA256
 ```
 
 Upgrades are manual for now: the built-in updater checks a feed you configure and verifies the
-installer's SHA-256 before offering **Install** (see [`docs/updater.md`](docs/updater.md)).
+installer's SHA-256 before offering **Install** (see [`docs/updater.md`](docs/updater.md)). Point
+**Settings → Update feed** at
+`https://github.com/J4NNEY/kodra-ide/releases/latest/download/latest.json`.
 
 Kodra keeps settings in `%APPDATA%\app.kodra.desktop`. On first launch after the rename it copies
 settings, checkpoints and extensions from the old `dev.kudo.desktop` folder without deleting the old
