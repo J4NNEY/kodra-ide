@@ -26,6 +26,22 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Hash through .NET instead of Get-FileHash: pnpm can start Windows PowerShell
+# with the PowerShell 7 module path inherited, which makes the bundled cmdlets
+# (and Get-FileHash with them) impossible to resolve on some CI runners.
+function Get-Sha256Hex([string]$Path) {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        return [System.BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        $stream.Dispose()
+        $sha.Dispose()
+    }
+}
+
 $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 try {
@@ -79,11 +95,11 @@ try {
     $releaseInstaller = Join-Path $releaseDir $installerName
     Copy-Item -LiteralPath $installer -Destination $releaseInstaller -Force
 
-    $installerHash = (Get-FileHash -LiteralPath $releaseInstaller -Algorithm SHA256).Hash.ToLowerInvariant()
+    $installerHash = Get-Sha256Hex $releaseInstaller
     $checksums = @("$installerHash  $installerName")
     if (Test-Path -LiteralPath $appExe) {
         Copy-Item -LiteralPath $appExe -Destination (Join-Path $releaseDir 'kodra.exe') -Force
-        $exeHash = (Get-FileHash -LiteralPath $appExe -Algorithm SHA256).Hash.ToLowerInvariant()
+        $exeHash = Get-Sha256Hex $appExe
         $checksums += "$exeHash  kodra.exe"
     }
     Set-Content -LiteralPath (Join-Path $releaseDir 'checksums.txt') -Value $checksums -Encoding ascii
@@ -127,7 +143,15 @@ try {
     # Write UTF-8 without a BOM: serde_json rejects a leading BOM.
     [System.IO.File]::WriteAllText($manifestPath, $json, [System.Text.UTF8Encoding]::new($false))
 
-    $signature = (Get-AuthenticodeSignature -LiteralPath $releaseInstaller).Status
+    # Signature status is informational; a missing security module must not fail
+    # packaging, so fall back to 'Unknown'.
+    $signature = 'Unknown'
+    try {
+        $signature = (Get-AuthenticodeSignature -LiteralPath $releaseInstaller -ErrorAction Stop).Status
+    }
+    catch {
+        Write-Host 'kodra: could not read the Authenticode status.'
+    }
     Write-Host ''
     Write-Host "kodra: release $version ready" -ForegroundColor Green
     Write-Host "  installer : $releaseInstaller"

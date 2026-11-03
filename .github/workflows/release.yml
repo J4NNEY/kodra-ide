@@ -74,7 +74,11 @@ jobs:
           if (-not $base) {
             $base = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
           }
-          pnpm release:win -UpdateBaseUrl $base
+          # Run the packager under pwsh with an explicit execution policy.
+          # `pnpm release:win` starts `powershell`, and on the runner that
+          # inherits the PowerShell 7 module path, which loses the bundled
+          # cmdlets (Get-FileHash was the first casualty).
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -UpdateBaseUrl $base
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
