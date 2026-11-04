@@ -20,6 +20,7 @@ export function useCommands() {
   const epoch = useTerminalEpoch()
   const browser = useBrowser()
   const board = useBoard()
+  const design = useDesign()
   const database = useDatabase()
   const debug = useDebug()
   const tests = useTests()
@@ -141,9 +142,16 @@ export function useCommands() {
     },
     {
       id: 'view.canvas',
-      label: 'View: Canvas',
+      label: 'View: Design Canvas',
       group: 'View',
       hint: 'Ctrl+Shift+M',
+      run: () => design.show()
+    },
+    {
+      id: 'view.whiteboard',
+      label: 'View: Whiteboard',
+      group: 'View',
+      hint: 'Ctrl+Shift+Alt+M',
       run: () => board.show()
     },
     {

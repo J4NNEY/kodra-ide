@@ -245,6 +245,7 @@ menyebut server, mis. `Formatted with dart language server`.
 | | `~/.config/app.kodra.desktop/settings.json` (Linux) |
 | Checkpoint agent | `<config dir>\checkpoints\<workspace-key>\` |
 | Riwayat chat, session restore, layout | `localStorage` WebView (per workspace) |
+| Dokumen desain | `localStorage` WebView (per workspace), disalin ke `<workspace>\.kodra\design\` saat aplikasi desktop aktif |
 
 Settings berisi tema, font, toggles `formatOnSave`/`lintOnSave`, toggle `inlayHints` dan
 `semanticHighlighting`, daftar workspace terakhir, MCP server, dan API key agent. Untuk mengembalikan
@@ -305,14 +306,48 @@ pnpm install
    `Saved x.go - formatted with gofmt`.
 8. Buka file Dart: tipe hasil inferensi tampil inline (inlay hints), warna token dari server
    mengikuti tema, dan `Shift+Alt+H` di atas sebuah method menampilkan daftar pemanggilnya.
-9. `Ctrl+Shift+M` membuka canvas; tambahkan satu note, tutup, lalu buka lagi - isinya masih ada.
+9. `Ctrl+Shift+M` membuka design canvas; tambahkan satu heading, tutup, lalu buka lagi - isinya masih ada.
+10. `Ctrl+Shift+Alt+M` membuka whiteboard; tambahkan satu note dan pastikan isinya tersimpan.
 
-## 12. Canvas (papan tulis)
+## 12. Design canvas
+
+Design canvas adalah overlay layar penuh untuk merancang tampilan web/aplikasi. Buka lewat ikon
+**Design** di activity bar, menu **View → Design Canvas**, command palette (`View: Design Canvas`),
+atau `Ctrl+Shift+M`. Whiteboard adalah permukaan terpisah dan dibuka dengan
+`Ctrl+Shift+Alt+M`; membuka salah satu menutup yang lain.
+
+- **Board = screen.** Tombol `+` di rail kiri menambah board. Setiap board punya nama, device
+  (Desktop 1280×800, Tablet 834×1112, Mobile 390×844), tema light/dark, dan ukuran sendiri. Board
+  aktif juga menjadi konteks default untuk agent.
+- **Komponen.** Panel kanan berisi 19 komponen: container `Stack`, `Row`, `Card`, `Navbar`, `List`,
+  dan leaf `Heading`, `Text`, `Button`, `Input`, `Textarea`, `Badge`, `Avatar`, `Image`, `Divider`,
+  `Checkbox`, `Toggle`, `Tabs`, `Icon`, `List item`. Klik komponen untuk menambahkannya ke board atau
+  ke container yang sedang dipilih.
+- **Auto-layout.** Container menata anaknya sendiri (vertical/horizontal, gap, padding, align,
+  justify), jadi menambah, menghapus, atau menggeser anak tidak perlu menata posisi manual. Lebar
+  `fill` mengisi container, `hug` mengikuti isi.
+- **Seleksi dan edit.** Klik node di kanvas atau di **Layers**; inspector kanan mengubah teks, props,
+  ukuran, dan layout. Drag di kanvas memindahkan node (garis drop menunjukkan posisi), handle sudut
+  mengubah ukuran, `Ctrl+Z`/`Ctrl+Shift+Z` undo/redo, `Ctrl+D` duplikat, `Delete` hapus. Scroll untuk
+  pan, `Ctrl`+scroll untuk zoom, tombol fit mengembalikan seluruh board ke layar.
+- **Penyimpanan.** Dokumen disimpan otomatis per workspace di `localStorage` (debounce), bukan file
+  project. Di aplikasi desktop, canvas juga menulis salinan yang bisa dibaca agent ke
+  `.kodra/design/`: `README.md` (daftar board), satu `<slug>.md` per board, dan `design.json` untuk
+  mesin. Folder itu **generated** - canvas menimpanya saat menyimpan; ubah desain lewat canvas atau
+  tool agent, bukan dengan mengedit file tersebut.
+- **Agent.** System prompt memuat ringkasan board. Agent memakai `read_design` untuk membaca pohon
+  lengkap (id stabil, teks, props) dan `write_design` untuk mengubahnya dengan daftar operasi
+  (`create_board`, `add_node`, `update_node`, `move_node`, `duplicate_node`, `remove_node`, …).
+  Setiap `write_design` meminta approval lewat kartu di chat, membuat checkpoint, lalu menyegarkan
+  kanvas dan salinan `.kodra/design`. Referensi node boleh berupa id, nama, teks yang terlihat, atau
+  label komponen yang unik (mis. `Card`); id lebih aman bila labelnya berulang.
+
+## 13. Whiteboard (papan tulis)
 
 Canvas adalah overlay layar penuh untuk mencatat bebas: sticky note, bentuk, teks, coretan tangan,
-dan konektor. Buka lewat ikon pena di activity bar, menu **View → Canvas**, command palette
-(`View: Canvas`), atau `Ctrl+Shift+M`. `Esc` menutup overlay (tekan sekali lagi jika sebuah tool
-sedang aktif).
+dan konektor. Buka lewat ikon pena di activity bar, menu **View → Whiteboard**, command palette
+(`View: Whiteboard`), atau `Ctrl+Shift+Alt+M`. `Esc` menutup overlay (tekan sekali lagi jika sebuah
+tool sedang aktif).
 
 - Isi papan disimpan otomatis per workspace di `localStorage`, bukan sebagai file di folder project,
   jadi ikut hilang bila data WebView dibersihkan.
@@ -326,7 +361,7 @@ sedang aktif).
   tombol panah menggeser 1 px (`Shift` + panah: 10 px). Tombol **Download** di header mengekspor
   papan sebagai PNG.
 
-## 13. Shortcut penting
+## 14. Shortcut penting
 
 | Shortcut | Fungsi |
 | --- | --- |
@@ -338,7 +373,8 @@ sedang aktif).
 | `Ctrl+Shift+G` | Source Control |
 | `Ctrl+Shift+D` / `Ctrl+Shift+B` | Debugger / Tasks |
 | `Ctrl+\`` | terminal |
-| `Ctrl+Shift+M` | canvas / papan tulis |
+| `Ctrl+Shift+M` | design canvas |
+| `Ctrl+Shift+Alt+M` | whiteboard |
 | `Ctrl+\` | split editor |
 | `Ctrl+,` | Settings |
 | `F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5` | debug: start, breakpoint, step over, step in, step out, stop |

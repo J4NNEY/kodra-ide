@@ -53,12 +53,13 @@ data.
 | Terminal | Real PTY (`portable-pty`), xterm.js, multiple tabbed sessions, shell picker with detected shells, resizable panel, PowerShell by default on Windows |
 | Workspace | Native folder picker, file tree with inline create/rename/delete, fuzzy search, project-wide search with case/whole-word/regex toggles, previewed replace-all |
 | Source control | Git status, stage/unstage, commit, branch switch, history, diff preview, and worktrees (list, create on a new branch, open, remove, prune stale) |
-| Agent | Streaming chat with OpenAI-compatible and Anthropic providers, tool calling (`list_dir`, `read_file`, `write_file`, `search_files`, `grep`, `run_command`, `read_skill`), inline approval cards, cancellation |
+| Agent | Streaming chat with OpenAI-compatible and Anthropic providers, tool calling (`list_dir`, `read_file`, `write_file`, `search_files`, `grep`, `run_command`, `read_skill`, `read_design`, `write_design`), inline approval cards, cancellation |
 | Checkpoints | Every agent file write snapshots the previous contents first; chat replies show a Restore card with the touched files and the Agent pane lists recent changes |
 | Skills | Discovers `SKILL.md` bundles in `.kodra/skills`, `.claude/skills` and the user config dir; catalog injected into the agent prompt |
 | Database | SQLite browser (tables, schema, paging), SQL console with history, CSV export via native save dialog |
 | Browser | In-app preview overlay with address bar, remembered last URL, self-origin guard, request inspector run in Rust (no CORS), open in system browser |
-| Canvas | Full-screen whiteboard overlay (`Ctrl+Shift+M`): sticky notes, rectangles, ellipses, diamonds, text, freehand pen and connectors that stay attached to the shapes they link; pan/zoom, multi-select with resize handles, undo/redo, per-workspace autosave and PNG export |
+| Design | Full-screen design canvas (`Ctrl+Shift+M`): one board per screen at desktop/tablet/mobile sizes, a 19-component palette (frames, stacks, rows, cards, navbars, lists, headings, text, buttons, inputs and more), auto-layout, layer tree, inspector, drag reorder, resize handles, pan/zoom, light/dark boards, undo/redo and per-workspace autosave; the agent reads it with `read_design`, edits it with `write_design` under approval, and a generated `.kodra/design` copy keeps the tree on disk |
+| Whiteboard | Full-screen whiteboard overlay (`Ctrl+Shift+Alt+M`): sticky notes, rectangles, ellipses, diamonds, text, freehand pen and connectors that stay attached to the shapes they link; pan/zoom, multi-select with resize handles, undo/redo, per-workspace autosave and PNG export |
 | MCP | stdio JSON-RPC client, server presets, connect/disconnect, tool list and a tool runner |
 | LSP | Language servers on PATH (rust-analyzer, gopls, Dart, TypeScript, Pyright, JSON/CSS/HTML) start per language; completion with auto-import edits, hover docs, go-to-definition (`F12`/`Ctrl+click`), signature help and occurrence highlighting at the cursor, semantic tokens and inline type/parameter hints, call hierarchy (`Shift+Alt+H`) and type hierarchy, rename (`F2`), references (`Shift+F12`), document symbols (`Ctrl+Shift+O`), workspace symbols (`Ctrl+T`), quick fixes (`Ctrl+.`), diagnostics as squiggles plus a Problems panel and status-bar counts |
 | Debugger | Debug Adapter Protocol client over stdio (Delve, CodeLLDB, lldb-dap, custom): launch configs, breakpoint gutter with conditions, call stack, lazily expanded variables, watch expressions, console, and step/continue/stop controls (`F5`, `F9`, `F10`, `F11`, `Shift+F11`, `Shift+F5`) |
@@ -120,9 +121,9 @@ Settings are stored as JSON in the Tauri config directory (`Settings → About �
 ```
 app/
   app.vue                 shell: title bar, sidebar, editor, agent panel, status bar
-  components/             editor, terminal, panes, overlays, settings
-  composables/            useIde, useChat, useGit, useDatabase, useMcp, useBrowser, ...
-  lib/                    typed IPC bridge (api.ts), mock backend, markdown, types
+  components/             editor, terminal, panes, overlays (design canvas, whiteboard), settings
+  composables/            useIde, useChat, useDesign, useGit, useDatabase, useMcp, useBrowser, ...
+  lib/                    typed IPC bridge (api.ts), mock backend, design model and operations, markdown, types
 src-tauri/
   src/commands/           one module per feature area (pty, workspace, git, ai, db, mcp, lsp, dap, docker, ...)
   src/state.rs            AppState, persisted Settings, session structs
@@ -138,7 +139,8 @@ registered in `src-tauri/src/lib.rs`.
 ## Agent safety model
 
 - File writes and shell commands require approval through an inline card in the chat panel
-  (`autoApprove` in Settings → Agent skips this).
+  (`autoApprove` in Settings → Agent skips this). Design edits through `write_design` use the same
+  card, and the canvas keeps its own undo stack for them.
 - Backend file tools resolve every path through `util::resolve_in_workspace`, which rejects `..`
   traversal and symlinks that escape the workspace.
 - `run_command` is sandboxed to the workspace directory, uses a 120 s timeout and is killed when

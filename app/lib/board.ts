@@ -349,8 +349,8 @@ function fontFamily(): string {
 }
 
 /** Pixel width of a word for the canvas text style used by the board. */
-export function measureWord(word: string, size: number): number {
-  const key = `${size}|${word}`
+export function measureWord(word: string, size: number, weight = 500): number {
+  const key = `${weight}|${size}|${word}`
   const cached = wordWidthCache.get(key)
   if (cached !== undefined) return cached
   if (typeof document === 'undefined') {
@@ -361,7 +361,7 @@ export function measureWord(word: string, size: number): number {
   measureContext ??= document.createElement('canvas').getContext('2d')
   let width = word.length * size * 0.55
   if (measureContext) {
-    measureContext.font = `500 ${size}px ${fontFamily()}`
+    measureContext.font = `${weight} ${size}px ${fontFamily()}`
     width = measureContext.measureText(word).width
   }
   wordWidthCache.set(key, width)
@@ -374,7 +374,7 @@ export function measureText(text: string, size: number): number {
 }
 
 /** Word-wrap that also honours explicit newlines and over-long words. */
-export function wrapText(text: string, maxWidth: number, size: number): string[] {
+export function wrapText(text: string, maxWidth: number, size: number, weight = 500): string[] {
   const source = text.replace(/\r\n?/g, '\n')
   if (!source) return []
   const lines: string[] = []
@@ -388,22 +388,22 @@ export function wrapText(text: string, maxWidth: number, size: number): string[]
       const word = rawWord
       if (!word) continue
       const candidate = line ? `${line}${word}` : word.trimStart()
-      if (candidate && measureWord(candidate.trimEnd(), size) <= maxWidth) {
+      if (candidate && measureWord(candidate.trimEnd(), size, weight) <= maxWidth) {
         line = candidate
         continue
       }
       if (line.trim()) {
         lines.push(line.trimEnd())
         line = word.trimStart()
-        if (line && measureWord(line, size) <= maxWidth) continue
+        if (line && measureWord(line, size, weight) <= maxWidth) continue
       } else {
         line = word.trimStart()
       }
       // Break a single word that is wider than the box, character by character.
       let rest = line
-      while (rest && measureWord(rest, size) > maxWidth) {
+      while (rest && measureWord(rest, size, weight) > maxWidth) {
         let cut = rest.length - 1
-        while (cut > 1 && measureWord(rest.slice(0, cut), size) > maxWidth) cut--
+        while (cut > 1 && measureWord(rest.slice(0, cut), size, weight) > maxWidth) cut--
         lines.push(rest.slice(0, cut))
         rest = rest.slice(cut)
       }

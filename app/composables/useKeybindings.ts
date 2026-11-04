@@ -7,6 +7,7 @@ export function useKeybindings() {
   const epoch = useTerminalEpoch()
   const browser = useBrowser()
   const board = useBoard()
+  const design = useDesign()
   const database = useDatabase()
   const debug = useDebug()
   const tests = useTests()
@@ -30,6 +31,10 @@ export function useKeybindings() {
   }
 
   function closeOverlays() {
+    if (design.open.value) {
+      design.hide()
+      return true
+    }
     if (board.open.value) {
       board.hide()
       return true
@@ -55,8 +60,8 @@ export function useKeybindings() {
   }
 
   function onKeydown(event: KeyboardEvent) {
-    // The whiteboard owns the keyboard while it is on screen.
-    if (board.open.value) return
+    // The design canvas and whiteboard own the keyboard while they are on screen.
+    if (board.open.value || design.open.value) return
 
     if (event.key === 'Escape') {
       closeOverlays()
@@ -144,7 +149,8 @@ export function useKeybindings() {
 
     if (shift && key === 'm') {
       event.preventDefault()
-      board.show()
+      if (event.altKey) board.show()
+      else design.show()
       return
     }
 

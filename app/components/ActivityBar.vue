@@ -14,13 +14,15 @@ import {
   Globe,
   Blocks,
   Puzzle,
-  PenTool
+  PenTool,
+  LayoutGrid
 } from 'lucide-vue-next'
 import type { SidebarView } from '../lib/types'
 
 const ide = useIde()
 const browser = useBrowser()
 const board = useBoard()
+const design = useDesign()
 const gitCount = useState<number>('kodra:git-count', () => 0)
 
 const items: { id: SidebarView; icon: any; label: string; badge?: boolean }[] = [
@@ -80,6 +82,10 @@ function select(id: SidebarView) {
 
     <button class="act-btn" title="Browser preview" @click="browser.show()">
       <Globe :size="19" :stroke-width="1.7" />
+    </button>
+
+    <button class="act-btn" title="Design canvas" @click="design.show()">
+      <LayoutGrid :size="19" :stroke-width="1.7" />
     </button>
 
     <button class="act-btn" title="Canvas whiteboard" @click="board.show()">

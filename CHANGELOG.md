@@ -2,10 +2,25 @@
 
 ## Unreleased
 
-A whiteboard for quick thinking that does not belong in a file tree.
+A design canvas for screens and a whiteboard for quick thinking that does not belong in a file tree.
 
-- **Canvas** — a full-screen board (`Ctrl+Shift+M`, the pen icon in the activity bar or
-  **View → Canvas**) for sticky notes, rectangles, ellipses, diamonds, text, freehand drawing and
+- **Design canvas** — a full-screen surface (`Ctrl+Shift+M`, or **View → Design Canvas**) with one
+  board per screen at desktop, tablet or mobile sizes. A 19-component palette covers frames, stacks,
+  rows, cards, navbars, lists and the usual content leaves; auto-layout places children, and a layer
+  tree plus an inspector handle the rest.
+- **Built for editing** — click to add, drag to reorder with a drop line, resize with corner handles,
+  pan and zoom, fit to screen, undo/redo, duplicate and delete. Boards carry a light or dark theme and
+  keep their own viewport.
+- **The agent can design** — the system prompt carries a board summary, `read_design` returns the full
+  tree with stable ids, and `write_design` applies a batch of operations behind an approval card and a
+  checkpoint. Edits refresh the open canvas immediately.
+- **Readable on disk** — in the desktop app the canvas keeps a generated copy in `.kodra/design`
+  (`README.md`, one Markdown file per board and `design.json`), so the agent has a second, plain-file
+  path to the same design. The folder is generated; the canvas rewrites it on save.
+- **Whiteboard stays separate** — the existing board moved to `Ctrl+Shift+Alt+M` (**View →
+  Whiteboard**); opening either surface closes the other.
+- **Canvas** — a full-screen board (`Ctrl+Shift+Alt+M`, the pen icon in the activity bar or
+  **View → Whiteboard**) for sticky notes, rectangles, ellipses, diamonds, text, freehand drawing and
   connectors. It is built on SVG and pointer events, so it adds no dependency and follows the
   current theme in both light and dark.
 - **Boards keep their connections** — a connector dropped on a shape binds to it, so it keeps

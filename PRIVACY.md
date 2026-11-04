@@ -11,10 +11,17 @@ maintainers do not receive any data about you or your projects.
 | Agent checkpoints (file snapshots) | `%APPDATA%\app.kodra.desktop\checkpoints\` |
 | Installed extensions | `%APPDATA%\app.kodra.desktop\extensions\` |
 | Chat history, session restore, layout, recent workspaces | WebView `localStorage` for the app |
+| Design canvas document (all boards, one per workspace) | WebView `localStorage` for the app |
+| Generated design copy (Markdown and JSON) | `<workspace>\.kodra\design\` |
 | Canvas boards (one per workspace) | WebView `localStorage` for the app |
 
 Deleting these folders removes the data. Uninstalling Kodra leaves them in place so a reinstall keeps
 your setup.
+
+The design canvas writes `.kodra/design` only in the desktop app, and only when the document changes.
+The folder is generated: Kodra overwrites it on save, so treat it as a build artefact rather than a
+source file. Because it lives in the workspace, it can be committed or synced by your own Git remote
+if you choose to track it.
 
 On the first launch after the rename, Kodra copies settings, checkpoints and extensions from the old
 `dev.kudo.desktop` folder. The old folder is not deleted.
@@ -23,9 +30,9 @@ On the first launch after the rename, Kodra copies settings, checkpoints and ext
 
 Kodra only makes network requests that a feature you use requires:
 
-- **AI agent** — prompts, the selected files' contents and tool results are sent to the provider you
-  configured (for example OpenAI, Anthropic or a self-hosted OpenAI-compatible endpoint), using your
-  API key. That provider's privacy policy applies.
+- **AI agent** — prompts, the selected files' contents and tool results (including design trees returned
+  by `read_design`) are sent to the provider you configured (for example OpenAI, Anthropic or a
+  self-hosted OpenAI-compatible endpoint), using your API key. That provider's privacy policy applies.
 - **Update check** — when you press **Check**, Kodra requests the update manifest URL you configured.
 - **MCP servers** — the servers you add may run local commands or contact their own services.
 - **Browser preview** — pages you open load from their own origin and behave like any browser request.

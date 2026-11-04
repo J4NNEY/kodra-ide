@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { applyDesignOps } from './lib/designOps'
+import { designBrief } from './lib/design'
 
 const ide = useIde()
 const git = useGit()
@@ -20,10 +22,27 @@ const CodeActionMenu = defineAsyncComponent(() => import('./components/CodeActio
 const SettingsDialog = defineAsyncComponent(() => import('./components/SettingsDialog.vue'))
 const BrowserOverlay = defineAsyncComponent(() => import('./components/BrowserOverlay.vue'))
 const BoardOverlay = defineAsyncComponent(() => import('./components/BoardOverlay.vue'))
+const DesignOverlay = defineAsyncComponent(() => import('./components/DesignOverlay.vue'))
 const board = useBoard()
+const design = useDesign()
 const sidebarWidth = useLayoutSize('sidebar-width', 268, 200, 520)
 const chatWidth = useLayoutSize('chat-width', 384, 300, 720)
 const booting = ref(true)
+
+// The design canvas and the whiteboard are both full-screen surfaces; keep at
+// most one open so their keyboard handlers never fight.
+watch(
+  () => design.open.value,
+  (open) => {
+    if (open) board.hide()
+  }
+)
+watch(
+  () => board.open.value,
+  (open) => {
+    if (open) design.hide()
+  }
+)
 
 useKeybindings()
 
@@ -32,6 +51,20 @@ useKeybindings()
 if (import.meta.dev && typeof window !== 'undefined') {
   ;(window as unknown as Record<string, unknown>).__kodraOpenFolder = (path: string) =>
     ide.openFolder(path)
+  ;(window as unknown as Record<string, unknown>).__kodraDesign = {
+    doc: design.doc,
+    sync: design.sync,
+    revision: design.revision,
+    brief: () => designBrief(design.doc.value),
+    spec: () => design.copySpec(),
+    apply: (operations: unknown) => {
+      design.checkpoint()
+      design.markAgent()
+      const result = applyDesignOps(design.doc.value, operations)
+      if (result.changed) design.persistNow()
+      return result
+    }
+  }
 }
 
 function dragWidth(event: PointerEvent, kind: 'sidebar' | 'chat') {
@@ -59,6 +92,7 @@ function dragWidth(event: PointerEvent, kind: 'sidebar' | 'chat') {
 onMounted(async () => {
   ide.applyTheme()
   await ide.init()
+  design.init()
   await extensions.ensureLoaded()
   chat.load()
   void lsp.detect()
@@ -85,6 +119,7 @@ watch(
     format.reset()
     if (ide.workspace.value) void format.detect()
     chat.load()
+    design.init()
     await git.refresh()
   }
 )
@@ -134,6 +169,7 @@ useHead({ title: () => (ide.workspace.value ? `${ide.workspace.value.name} — K
   <SettingsDialog />
   <BrowserOverlay />
   <BoardOverlay v-if="board.open.value" />
+  <DesignOverlay v-if="design.open.value" />
   <ToastHost />
 
   <div v-if="booting" class="boot-splash">

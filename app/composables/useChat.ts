@@ -1,6 +1,13 @@
 import type { ChatMessage, ToolCall } from '../lib/types'
 import { call, cancelChat, isTauri, streamChat } from '../lib/api'
 import type { ToolDef } from '../lib/api'
+import {
+  boardMarkdown,
+  designBrief,
+  designMarkdown,
+  type DesignDocument
+} from '../lib/design'
+import { applyDesignOps } from '../lib/designOps'
 
 const tools: ToolDef[] = [
   {
@@ -78,6 +85,50 @@ const tools: ToolDef[] = [
       },
       required: ['path']
     }
+  },
+  {
+    name: 'read_design',
+    description:
+      'Read the Kodra design canvas: boards (screens), device sizes and the full component tree with stable node ids, text, layout properties and nesting. Use this before changing or implementing a screen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        board: {
+          type: 'string',
+          description: 'Optional board name or id. Omit to read every board.'
+        },
+        format: {
+          type: 'string',
+          enum: ['markdown', 'json'],
+          description: 'markdown (default) is compact; json returns the raw document for large edits.'
+        }
+      }
+    }
+  },
+  {
+    name: 'write_design',
+    description:
+      'Change the Kodra design canvas. Pass an array of operations applied in order. Operations: ' +
+      '{"op":"create_board","name":"Login","device":"desktop|tablet|mobile"}, ' +
+      '{"op":"update_board","board":"name or id","name":"…","device":"…","theme":"light|dark"}, ' +
+      '{"op":"delete_board","board":"…"}, ' +
+      '{"op":"add_node","board":"…","parent":"container id, name, visible text, or a unique label like Card","kind":"stack|row|card|navbar|list|listItem|heading|text|button|input|textarea|badge|avatar|image|divider|checkbox|toggle|tabs|icon","text":"…","index":0,"props":{…}}, ' +
+      '{"op":"update_node","board":"…","id":"node id, name, visible text, or a unique label like Card","props":{"text":"…","size":"sm|md|lg","variant":"primary|secondary|ghost|danger","tone":"slate|accent|green|red|blue|purple","width":"fill|hug|number","height":"hug|number","gap":16,"padding":20,"radius":12,"align":"start|center|end","justify":"start|center|end|between","direction":"vertical|horizontal","placeholder":"…","checked":true,"items":["…"],"icon":"Search"}}, ' +
+      '{"op":"remove_node","board":"…","id":"…"}, ' +
+      '{"op":"move_node","board":"…","id":"…","parent":"…","index":0}, ' +
+      '{"op":"duplicate_node","board":"…","id":"…"}. ' +
+      'Call read_design first so ids are current; prefer ids when labels repeat. Read the result: it lists every applied change.',
+    parameters: {
+      type: 'object',
+      properties: {
+        operations: {
+          type: 'array',
+          description: 'Ordered list of design operations.',
+          items: { type: 'object' }
+        }
+      },
+      required: ['operations']
+    }
   }
 ]
 
@@ -102,6 +153,7 @@ const approvalResolvers = new Map<string, (ok: boolean) => void>()
 export function useChat() {
   const ide = useIde()
   const checkpoints = useCheckpoints()
+  const design = useDesign()
   const messages = useState<ChatMessage[]>('kodra:chat-messages', () => [])
   const busy = useState<boolean>('kodra:chat-busy', () => false)
   const requestId = useState<string | null>('kodra:chat-request', () => null)
@@ -161,16 +213,20 @@ export function useChat() {
       return `Invalid JSON arguments: ${toolCall.arguments}`
     }
 
-    const needsApproval = ['write_file', 'run_command'].includes(toolCall.name)
+    const needsApproval = ['write_file', 'run_command', 'write_design'].includes(toolCall.name)
     if (needsApproval && !ide.settings.value.ai.autoApprove) {
       const title =
         toolCall.name === 'write_file'
           ? `Write ${args.path ?? 'a file'}?`
-          : 'Run a shell command?'
+          : toolCall.name === 'write_design'
+            ? 'Update the design canvas?'
+            : 'Run a shell command?'
       const detail =
         toolCall.name === 'write_file'
           ? String(args.content ?? '')
-          : String(args.command ?? '')
+          : toolCall.name === 'write_design'
+            ? summarise(args.operations ?? [], 6_000)
+            : String(args.command ?? '')
       const allowed = await requestApproval(toolCall, title, detail)
       if (!allowed) return 'The user denied this action.'
     }
@@ -231,6 +287,46 @@ export function useChat() {
           const text = await call<string>('skill_read', { path: args.path })
           return summarise(text)
         }
+        case 'read_design': {
+          design.init()
+          const doc = design.doc.value as DesignDocument
+          const boardRef = typeof args.board === 'string' ? args.board.trim().toLowerCase() : ''
+          const board = boardRef
+            ? doc.boards.find(
+                (entry) => entry.id === args.board || entry.name.toLowerCase() === boardRef
+              )
+            : null
+          if (boardRef && !board) {
+            return `No board matches "${args.board}". Boards: ${doc.boards
+              .map((entry) => `${entry.name} (${entry.id})`)
+              .join(', ')}`
+          }
+          if (args.format === 'json') {
+            const plain = board
+              ? { ...board, view: undefined }
+              : {
+                  ...doc,
+                  boards: doc.boards.map((entry) => ({ ...entry, view: undefined }))
+                }
+            return summarise(plain, 60_000)
+          }
+          if (board) return boardMarkdown(board)
+          return summarise(designMarkdown(doc), 60_000)
+        }
+        case 'write_design': {
+          design.init()
+          design.checkpoint()
+          design.markAgent()
+          const result = applyDesignOps(design.doc.value, args.operations)
+          if (result.changed) {
+            design.persistNow()
+            void design.syncNow()
+          }
+          const summary = result.log.join('\n')
+          return result.changed
+            ? `${summary}\n\nThe canvas is updated; in the desktop app the generated .kodra/design copy is refreshed too.`
+            : summary
+        }
         default:
           return `Unknown tool: ${toolCall.name}`
       }
@@ -273,6 +369,14 @@ export function useChat() {
       }
     }
 
+    let designContext = ''
+    try {
+      design.init()
+      designContext = designBrief(design.doc.value)
+    } catch {
+      /* the design store is optional */
+    }
+
     const id = `chat-${Date.now()}`
     requestId.value = id
 
@@ -294,7 +398,10 @@ export function useChat() {
             baseUrl: ide.settings.value.ai.baseUrl,
             model: ide.settings.value.ai.model,
             apiKey: ide.settings.value.ai.apiKey,
-            system: ide.settings.value.ai.systemPrompt + skillContext,
+            system:
+              ide.settings.value.ai.systemPrompt +
+              skillContext +
+              (designContext ? `\n\n${designContext}` : ''),
             messages: messages.value
               .filter((m) => !m.pending || m.content)
               .map((m) => ({
